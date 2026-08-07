@@ -52,11 +52,11 @@ const message = useMessage()
         <section class="privacy-section">
           <h2 class="section-title">数据与隐私</h2>
           <div class="surface-card privacy-card">
-            <div><NIcon :size="29"><ShieldCheckmarkOutline /></NIcon><span>仅在获得授权后同步学习平台数据。</span></div>
+            <div><span class="privacy-icon"><NIcon :size="29"><ShieldCheckmarkOutline /></NIcon></span><span>仅在获得授权后同步学习平台数据。</span></div>
             <i />
-            <div><NIcon :size="29"><LockClosedOutline /></NIcon><span>聚合截止线登录账号不会用于获取作业。</span></div>
+            <div><span class="privacy-icon"><NIcon :size="29"><LockClosedOutline /></NIcon></span><span>聚合截止线登录账号不会用于获取作业。</span></div>
             <i />
-            <div><NIcon :size="29"><DocumentTextOutline /></NIcon><span>绑定前会明确说明所需信息、用途与保存方式。</span></div>
+            <div><span class="privacy-icon"><NIcon :size="29"><DocumentTextOutline /></NIcon></span><span>绑定前会明确说明所需信息、用途与保存方式。</span></div>
           </div>
         </section>
 
@@ -175,20 +175,50 @@ const message = useMessage()
   align-items: center;
   margin-top: 14px;
   padding: 18px 32px;
+  box-shadow: none;
 }
 
 .privacy-card > div {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 12px;
   color: #506686;
   font-size: 14px;
 }
 
-.privacy-card :deep(.n-icon) {
-  flex: 0 0 auto;
+.privacy-card > div > span:last-child {
+  display: block;
+  line-height: 30px;
+  white-space: nowrap;
+}
+
+.privacy-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  line-height: 0;
   color: var(--primary);
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none;
+}
+
+.privacy-icon :deep(.n-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  line-height: 29px;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none;
 }
 
 .privacy-card i {

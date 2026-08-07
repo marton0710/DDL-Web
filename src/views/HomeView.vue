@@ -48,7 +48,7 @@ const keyword = ref('')
         </article>
         <article class="surface-card stat-card">
           <span class="icon-circle stat-icon teal"><NIcon :size="31"><CheckmarkCircleOutline /></NIcon></span>
-          <div><span>已完成</span><strong>11</strong></div>
+          <div><span>已完成</span><strong>0</strong></div>
         </article>
       </section>
 
@@ -84,7 +84,7 @@ const keyword = ref('')
 
           <div class="surface-card task-table-card">
             <div class="table-scroll">
-              <table class="task-table">
+              <table class="task-table" :class="`filter-${taskFilter}`">
                 <thead>
                   <tr>
                     <th class="check-cell"><span class="fake-checkbox" /></th>
@@ -94,59 +94,68 @@ const keyword = ref('')
                     <th>截止时间</th>
                     <th>剩余时间</th>
                     <th>状态</th>
-                    <th>优先级</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-show="taskFilter === 'all' || taskFilter === 'soon'">
-                    <td class="check-cell"><button class="fake-checkbox" type="button" aria-label="选中软件工程课程设计" /></td>
-                    <td class="task-name">软件工程课程设计</td>
+                  <tr class="due-soon">
+                    <td class="check-cell">
+                      <input id="task-software-design" class="task-complete-toggle" type="checkbox" aria-label="标记软件工程课程设计为已完成" />
+                      <label class="fake-checkbox" for="task-software-design" aria-hidden="true" />
+                    </td>
+                    <td class="task-name"><a href="https://courses.cqupt.edu.cn/" target="_blank" rel="noopener noreferrer">软件工程课程设计</a></td>
                     <td>软件工程</td>
                     <td><span class="platform-badge cqupt"><b>邮</b>学在重邮</span></td>
                     <td class="date-cell">2026-08-02 23:59</td>
-                    <td><span class="remaining urgent">3 小时 42 分</span></td>
-                    <td><span class="status unfinished">未完成</span></td>
-                    <td><span class="priority-dot high" />高</td>
+                    <td><span class="remaining remaining-pending urgent">3 小时 42 分</span><span class="remaining remaining-done complete">已完成</span></td>
+                    <td><label class="status status-toggle" for="task-software-design"><span class="state-unfinished">未完成</span><span class="state-completed">已完成</span></label></td>
                   </tr>
-                  <tr v-show="taskFilter === 'all' || taskFilter === 'soon'">
-                    <td class="check-cell"><button class="fake-checkbox" type="button" aria-label="选中大学物理实验报告" /></td>
-                    <td class="task-name">大学物理实验报告</td>
+                  <tr class="due-soon">
+                    <td class="check-cell">
+                      <input id="task-physics-report" class="task-complete-toggle" type="checkbox" aria-label="标记大学物理实验报告为已完成" />
+                      <label class="fake-checkbox" for="task-physics-report" aria-hidden="true" />
+                    </td>
+                    <td class="task-name"><a href="https://i.chaoxing.com/" target="_blank" rel="noopener noreferrer">大学物理实验报告</a></td>
                     <td>大学物理实验</td>
                     <td><span class="platform-badge chaoxing"><b>学</b>学习通</span></td>
                     <td class="date-cell">2026-08-03 23:59</td>
-                    <td><span class="remaining urgent">1 天 3 小时</span></td>
-                    <td><span class="status unfinished">未完成</span></td>
-                    <td><span class="priority-dot medium" />中</td>
+                    <td><span class="remaining remaining-pending urgent">1 天 3 小时</span><span class="remaining remaining-done complete">已完成</span></td>
+                    <td><label class="status status-toggle" for="task-physics-report"><span class="state-unfinished">未完成</span><span class="state-completed">已完成</span></label></td>
                   </tr>
-                  <tr v-show="taskFilter === 'all' || taskFilter === 'soon'">
-                    <td class="check-cell"><button class="fake-checkbox" type="button" aria-label="选中数据结构第 6 次作业" /></td>
-                    <td class="task-name">数据结构第 6 次作业</td>
+                  <tr class="due-soon">
+                    <td class="check-cell">
+                      <input id="task-data-structure" class="task-complete-toggle" type="checkbox" aria-label="标记数据结构第 6 次作业为已完成" />
+                      <label class="fake-checkbox" for="task-data-structure" aria-hidden="true" />
+                    </td>
+                    <td class="task-name"><a href="https://www.yuketang.cn/" target="_blank" rel="noopener noreferrer">数据结构第 6 次作业</a></td>
                     <td>数据结构</td>
                     <td><span class="platform-badge yuketang"><b>雨</b>雨课堂</span></td>
                     <td class="date-cell">2026-08-04 12:00</td>
-                    <td><span class="remaining urgent">1 天 15 小时</span></td>
-                    <td><span class="status unfinished">未完成</span></td>
-                    <td><span class="priority-dot medium" />中</td>
+                    <td><span class="remaining remaining-pending urgent">1 天 15 小时</span><span class="remaining remaining-done complete">已完成</span></td>
+                    <td><label class="status status-toggle" for="task-data-structure"><span class="state-unfinished">未完成</span><span class="state-completed">已完成</span></label></td>
                   </tr>
-                  <tr v-show="taskFilter === 'all' || taskFilter === 'overdue'">
-                    <td class="check-cell"><button class="fake-checkbox" type="button" aria-label="选中高等数学在线测试" /></td>
-                    <td class="task-name">高等数学在线测试</td>
+                  <tr class="due-overdue">
+                    <td class="check-cell">
+                      <input id="task-math-test" class="task-complete-toggle" type="checkbox" aria-label="标记高等数学在线测试为已完成" />
+                      <label class="fake-checkbox" for="task-math-test" aria-hidden="true" />
+                    </td>
+                    <td class="task-name"><a href="https://i.chaoxing.com/" target="_blank" rel="noopener noreferrer">高等数学在线测试</a></td>
                     <td>高等数学</td>
                     <td><span class="platform-badge chaoxing"><b>学</b>学习通</span></td>
                     <td class="date-cell">2026-07-31 20:00</td>
-                    <td><span class="remaining overdue">已逾期 2 天</span></td>
-                    <td><span class="status unfinished">未完成</span></td>
-                    <td><span class="priority-dot high" />高</td>
+                    <td><span class="remaining remaining-pending overdue">已逾期 2 天</span><span class="remaining remaining-done complete">已完成</span></td>
+                    <td><label class="status status-toggle" for="task-math-test"><span class="state-unfinished">未完成</span><span class="state-completed">已完成</span></label></td>
                   </tr>
-                  <tr v-show="taskFilter === 'all' || taskFilter === 'done'">
-                    <td class="check-cell"><button class="fake-checkbox" type="button" aria-label="选中离散数学作业 5" /></td>
-                    <td class="task-name">离散数学作业 5</td>
+                  <tr class="due-overdue">
+                    <td class="check-cell">
+                      <input id="task-discrete-math" class="task-complete-toggle" type="checkbox" aria-label="标记离散数学作业 5 为已完成" />
+                      <label class="fake-checkbox" for="task-discrete-math" aria-hidden="true" />
+                    </td>
+                    <td class="task-name"><a href="https://www.yuketang.cn/" target="_blank" rel="noopener noreferrer">离散数学作业 5</a></td>
                     <td>离散数学</td>
                     <td><span class="platform-badge yuketang"><b>雨</b>雨课堂</span></td>
                     <td class="date-cell">2026-07-30 23:59</td>
-                    <td><span class="remaining complete">已完成</span></td>
-                    <td><span class="status completed">已完成</span></td>
-                    <td><span class="priority-dot low" />低</td>
+                    <td><span class="remaining remaining-pending overdue">已逾期 3 天</span><span class="remaining remaining-done complete">已完成</span></td>
+                    <td><label class="status status-toggle" for="task-discrete-math"><span class="state-unfinished">未完成</span><span class="state-completed">已完成</span></label></td>
                   </tr>
                 </tbody>
               </table>
@@ -388,7 +397,7 @@ const keyword = ref('')
 
 .task-table {
   width: 100%;
-  min-width: 950px;
+  min-width: 840px;
   border-collapse: collapse;
   color: #263958;
   font-size: 14px;
@@ -436,6 +445,7 @@ const keyword = ref('')
 }
 
 .fake-checkbox {
+  position: relative;
   width: 19px;
   height: 19px;
   display: inline-block;
@@ -445,10 +455,49 @@ const keyword = ref('')
   cursor: pointer;
 }
 
+.task-complete-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.task-table tbody tr:has(.task-complete-toggle:checked) .fake-checkbox {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.task-table tbody tr:has(.task-complete-toggle:checked) .fake-checkbox::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .task-name {
-  color: #0b1e42;
   font-weight: 600;
   font-size: 15px;
+}
+
+.task-name a {
+  color: #0b1e42;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: color 0.18s ease, text-decoration-color 0.18s ease;
+}
+
+.task-name a:hover,
+.task-name a:focus-visible {
+  color: var(--primary);
+  text-decoration-color: currentColor;
 }
 
 .platform-badge {
@@ -494,10 +543,43 @@ const keyword = ref('')
   border-radius: 10px;
 }
 
-.status.unfinished { color: #f45f0c; background: #fff1e7; border: 1px solid #ffe1cd; }
-.status.completed { color: #008e77; background: #e8f8f4; border: 1px solid #d2f0e8; }
+.status-toggle {
+  color: #f45f0c;
+  border: 1px solid #ffe1cd;
+  background: #fff1e7;
+  cursor: pointer;
+  user-select: none;
+}
 
-.priority-dot,
+.state-completed,
+.remaining-done {
+  display: none;
+}
+
+.task-table tbody tr:has(.task-complete-toggle:checked) .status-toggle {
+  color: #008e77;
+  border-color: #d2f0e8;
+  background: #e8f8f4;
+}
+
+.task-table tbody tr:has(.task-complete-toggle:checked) .state-unfinished,
+.task-table tbody tr:has(.task-complete-toggle:checked) .remaining-pending {
+  display: none;
+}
+
+.task-table tbody tr:has(.task-complete-toggle:checked) .state-completed,
+.task-table tbody tr:has(.task-complete-toggle:checked) .remaining-done {
+  display: inline;
+}
+
+.task-table.filter-soon tbody tr:not(.due-soon),
+.task-table.filter-overdue tbody tr:not(.due-overdue),
+.task-table.filter-done tbody tr:not(:has(.task-complete-toggle:checked)),
+.task-table.filter-soon tbody tr:has(.task-complete-toggle:checked),
+.task-table.filter-overdue tbody tr:has(.task-complete-toggle:checked) {
+  display: none;
+}
+
 .legend-dot {
   width: 10px;
   height: 10px;
@@ -505,10 +587,6 @@ const keyword = ref('')
   margin-right: 8px;
   border-radius: 50%;
 }
-
-.priority-dot.high { background: #e50d27; }
-.priority-dot.medium { background: #ff7107; }
-.priority-dot.low { background: #09a38a; }
 
 .table-footer {
   min-height: 72px;

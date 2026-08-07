@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCheckbox, NIcon, NInput } from 'naive-ui'
+import { NButton, NIcon, NInput } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
@@ -14,7 +14,6 @@ import {
 const router = useRouter()
 const account = ref('')
 const password = ref('')
-const remember = ref(false)
 const showPassword = ref(false)
 
 function submitLogin() {
@@ -65,10 +64,6 @@ function submitLogin() {
               </button>
             </template>
           </NInput>
-          <div class="form-options">
-            <NCheckbox v-model:checked="remember">记住我</NCheckbox>
-            <button type="button">忘记密码？</button>
-          </div>
           <NButton attr-type="submit" type="primary" size="large" block>登录</NButton>
         </form>
 
@@ -196,9 +191,28 @@ function submitLogin() {
 }
 
 .login-card form :deep(.n-input) {
+  --n-height: 64px !important;
+  height: 64px;
   min-height: 64px;
   border-radius: 9px;
   font-size: 18px;
+}
+
+.login-card form :deep(.n-input-wrapper) {
+  height: 100%;
+  align-items: center;
+}
+
+.login-card form :deep(.n-input__input),
+.login-card form :deep(.n-input__input-el) {
+  height: 100%;
+}
+
+.login-card form :deep(.n-input__prefix),
+.login-card form :deep(.n-input__suffix) {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
 }
 
 .login-card form :deep(.n-button) {
@@ -209,24 +223,13 @@ function submitLogin() {
 }
 
 .password-toggle {
+  height: 100%;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   padding: 3px;
   color: #71819c;
-  background: transparent;
-  cursor: pointer;
-}
-
-.form-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: -3px;
-}
-
-.form-options button {
-  border: 0;
-  color: var(--primary);
   background: transparent;
   cursor: pointer;
 }
@@ -304,6 +307,7 @@ function submitLogin() {
 
   .login-card form :deep(.n-input),
   .login-card form :deep(.n-button) {
+    --n-height: 54px !important;
     min-height: 54px;
     height: 54px;
   }
