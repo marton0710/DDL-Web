@@ -7,8 +7,8 @@ const themeOverrides = {
     primaryColorHover: '#2d7cf6',
     primaryColorPressed: '#0759d4',
     primaryColorSuppl: '#0f6af5',
-    borderRadius: '8px',
-    fontFamily: '"Inter", "PingFang SC", "Microsoft YaHei", sans-serif',
+    borderRadius: '10px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif',
   },
 }
 </script>

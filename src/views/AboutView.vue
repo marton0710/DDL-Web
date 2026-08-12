@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { NButton, NIcon, useMessage } from 'naive-ui'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { NButton, NIcon } from 'naive-ui'
 import {
   AlarmOutline,
-  ChatbubbleOutline,
   CheckmarkDoneOutline,
   ClipboardOutline,
-  DocumentTextOutline,
   InformationCircleOutline,
-  LockClosedOutline,
   RefreshOutline,
   ShieldCheckmarkOutline,
 } from '@vicons/ionicons5'
 import MainHeader from '../components/MainHeader.vue'
+import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
 
-const message = useMessage()
+const router = useRouter()
+const privacyVisible = ref(false)
 </script>
 
 <template>
@@ -36,71 +37,81 @@ const message = useMessage()
           <div class="feature-grid">
             <article class="surface-card feature-card">
               <span class="icon-circle feature-icon blue"><NIcon :size="30"><ClipboardOutline /></NIcon></span>
-              <div><h3>聚合作业</h3><p>集中展示学在重邮、学习通和雨课堂的任务。</p></div>
+              <div><h3>聚合作业</h3><p>集中展示学在重邮、学习通和雨课堂的作业任务。</p></div>
             </article>
             <article class="surface-card feature-card">
               <span class="icon-circle feature-icon orange"><NIcon :size="30"><AlarmOutline /></NIcon></span>
-              <div><h3>截止提醒</h3><p>按剩余时间标记临期与逾期任务。</p></div>
+              <div><h3>截止提醒</h3><p>按剩余时间清晰标记临期与逾期任务。</p></div>
             </article>
             <article class="surface-card feature-card">
               <span class="icon-circle feature-icon teal"><NIcon :size="30"><RefreshOutline /></NIcon></span>
-              <div><h3>同步扩展</h3><p>支持 QQChan 提醒与 Meet 课程表同步。</p></div>
+              <div><h3>同步扩展</h3><p>支持 QQ 提醒与 Meet 课程表同步。</p></div>
             </article>
           </div>
         </section>
 
         <section class="privacy-section">
           <h2 class="section-title">数据与隐私</h2>
-          <div class="surface-card privacy-card">
-            <div><span class="privacy-icon"><NIcon :size="29"><ShieldCheckmarkOutline /></NIcon></span><span>仅在获得授权后同步学习平台数据。</span></div>
-            <i />
-            <div><span class="privacy-icon"><NIcon :size="29"><LockClosedOutline /></NIcon></span><span>聚合截止线登录账号不会用于获取作业。</span></div>
-            <i />
-            <div><span class="privacy-icon"><NIcon :size="29"><DocumentTextOutline /></NIcon></span><span>绑定前会明确说明所需信息、用途与保存方式。</span></div>
-          </div>
+          <button class="surface-card privacy-entry" type="button" @click="privacyVisible = true">
+            <span class="privacy-entry-icon"><NIcon :size="27"><ShieldCheckmarkOutline /></NIcon></span>
+            <span><strong>查看隐私说明</strong><small>了解系统处理的信息、使用目的、保存方式和您的控制选项。</small></span>
+            <em>查看详情</em>
+          </button>
         </section>
 
         <section class="surface-card project-card">
-          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>项目版本</strong><span>v1.0.0</span></div>
+          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网页版本</strong><span>v1.0.0</span></div>
           <div class="project-actions">
-            <NButton size="large" type="primary" ghost @click="message.info('隐私说明页面将在后端接入阶段补充')">
-              <template #icon><NIcon><DocumentTextOutline /></NIcon></template>
-              查看隐私说明
+            <NButton size="large" type="primary" ghost @click="router.push('/home')">
+              <template #icon><NIcon><ClipboardOutline /></NIcon></template>
+              查看作业
             </NButton>
-            <NButton size="large" type="primary" @click="message.info('感谢反馈，反馈渠道将在服务上线后开放')">
-              <template #icon><NIcon><ChatbubbleOutline /></NIcon></template>
-              意见反馈
+            <NButton
+              tag="a"
+              href="https://github.com/marton0710/CQUPTDDL/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              size="large"
+              type="primary"
+            >
+              <template #icon><NIcon><ShieldCheckmarkOutline /></NIcon></template>
+              如有建议，欢迎反馈给我们
             </NButton>
           </div>
-          <p><NIcon><CheckmarkDoneOutline /></NIcon>我们希望减少遗漏，让学习安排更从容。</p>
+          <!-- <p><NIcon><CheckmarkDoneOutline /></NIcon>我们希望减少遗漏，让学习安排更从容。</p> -->
         </section>
       </div>
     </main>
+
+    <PrivacyNoticeModal v-model:show="privacyVisible" />
   </div>
 </template>
 
 <style scoped>
 .about-main {
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - 64px);
   padding: 0 0 48px;
-  border-radius: 30px 30px 0 0;
-  background: linear-gradient(180deg, #fbfdff, #f7faff);
+  background: transparent;
+}
+
+.about-main .page-shell {
+  width: min(1180px, calc(100% - 48px));
 }
 
 .about-hero {
-  min-height: 320px;
+  min-height: 290px;
   display: grid;
   grid-template-columns: 1.08fr 0.92fr;
   align-items: center;
   gap: 30px;
-  padding: 38px 70px 20px;
+  padding: 38px 42px 20px;
 }
 
 .about-hero h1 {
   margin: 0;
-  font-size: clamp(38px, 4vw, 54px);
+  font-size: clamp(36px, 4vw, 48px);
   line-height: 1.2;
-  letter-spacing: 1px;
+  letter-spacing: -1.2px;
 }
 
 .about-hero h2 {
@@ -117,14 +128,14 @@ const message = useMessage()
 
 .about-hero img {
   width: min(100%, 500px);
-  max-height: 280px;
+  max-height: 245px;
   object-fit: contain;
   justify-self: center;
 }
 
 .feature-section,
 .privacy-section {
-  padding: 0 70px;
+  padding: 0 42px;
 }
 
 .feature-grid {
@@ -168,63 +179,64 @@ const message = useMessage()
   margin-top: 28px;
 }
 
-.privacy-card {
-  min-height: 85px;
+.privacy-entry {
+  width: 100%;
+  min-height: 90px;
   display: grid;
-  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
+  gap: 16px;
   margin-top: 14px;
-  padding: 18px 32px;
-  box-shadow: none;
+  padding: 18px 22px;
+  color: #506686;
+  font: inherit;
+  text-align: left;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.privacy-card > div {
-  min-width: 0;
-  display: flex;
+.privacy-entry:hover {
+  border-color: #b9d2f5;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(23, 105, 232, 0.08);
+}
+
+.privacy-entry-icon {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  color: #506686;
-  font-size: 14px;
+  border-radius: 13px;
+  color: var(--primary);
+  background: #eaf2ff;
 }
 
-.privacy-card > div > span:last-child {
-  display: block;
-  line-height: 30px;
+.privacy-entry > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.privacy-entry strong {
+  color: #273b59;
+  font-size: 15px;
+}
+
+.privacy-entry small {
+  overflow: hidden;
+  color: #75849a;
+  font-size: 12px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.privacy-icon {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 30px;
-  line-height: 0;
+.privacy-entry em {
   color: var(--primary);
-  background: transparent !important;
-  box-shadow: none !important;
-  filter: none;
-}
-
-.privacy-icon :deep(.n-icon) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 29px;
-  height: 29px;
-  flex: 0 0 29px;
-  line-height: 29px;
-  background: transparent !important;
-  box-shadow: none !important;
-  filter: none;
-}
-
-.privacy-card i {
-  width: 1px;
-  height: 42px;
-  background: #dfe7f2;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
 }
 
 .project-card {
@@ -233,7 +245,7 @@ const message = useMessage()
   grid-template-columns: 1fr auto;
   align-items: start;
   gap: 18px;
-  margin: 25px 70px 0;
+  margin: 25px 42px 0;
   padding: 25px 32px 18px;
 }
 
@@ -293,20 +305,6 @@ const message = useMessage()
     grid-template-columns: 1fr;
   }
 
-  .privacy-card {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .privacy-card i {
-    width: 100%;
-    height: 1px;
-  }
-
-  .privacy-card > div {
-    justify-content: flex-start;
-  }
-
   .project-card {
     grid-template-columns: 1fr;
     margin: 25px 24px 0;
@@ -342,6 +340,20 @@ const message = useMessage()
   .feature-card {
     min-height: 108px;
     padding: 18px;
+  }
+
+  .privacy-entry {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .privacy-entry small {
+    white-space: normal;
+    line-height: 1.55;
+  }
+
+  .privacy-entry em {
+    grid-column: 2;
   }
 
   .project-card {

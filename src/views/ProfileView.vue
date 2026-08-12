@@ -1,30 +1,227 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NIcon, NSwitch, useMessage } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NForm, NFormItem, NIcon, NInput, NModal, useMessage } from 'naive-ui'
 import {
-  AlarmOutline,
-  CalendarOutline,
-  ChevronForwardOutline,
   InformationCircleOutline,
   KeyOutline,
   LayersOutline,
-  LockClosedOutline,
+  LogOutOutline,
   MailOutline,
-  RefreshOutline,
   ShieldCheckmarkOutline,
-  SyncOutline,
   WarningOutline,
 } from '@vicons/ionicons5'
 import MainHeader from '../components/MainHeader.vue'
+import { authApi } from '../api/auth'
+import { getApiErrorMessage, isAuthenticationError } from '../api/client'
+import { platformApi } from '../api/platform'
+import type {
+  CurrentUser,
+  PlatformAuthMethod,
+  PlatformCredentials,
+  UserInfoPatch,
+} from '../api/types'
+import { PLATFORM_META, type PlatformMeta } from '../domain/platform'
+import { useSession } from '../state/session'
 
 const router = useRouter()
 const message = useMessage()
-const syncEnabled = ref(true)
+const { avatarText, clearSession, displayName, setDisplayName } = useSession()
+const profileLoading = ref(false)
+const savingProfile = ref(false)
+const editDialogOpen = ref(false)
+const bindDialogOpen = ref(false)
+const bindLoading = ref(false)
+const logoutLoading = ref(false)
+const bindAuthMethod = ref<PlatformAuthMethod | null>(null)
 
-function showStaticTip(label: string) {
-  message.info(`${label}功能将在接入后端后启用`)
+const userInfo = reactive<CurrentUser>({
+  name: '',
+  email: null,
+  qqchan_id: null,
+  meetschedule_key: null,
+})
+
+const editForm = reactive({
+  email: '',
+  qqchanId: '',
+  meetscheduleKey: '',
+  clearQqchanId: false,
+  clearMeetscheduleKey: false,
+})
+
+type PlatformStatus = 'loading' | 'bound' | 'invalid' | 'unbound' | 'error'
+interface PlatformState extends PlatformMeta {
+  status: PlatformStatus
+  actionLoading: boolean
 }
+
+const platforms = reactive<PlatformState[]>(
+  PLATFORM_META.map((platform) => ({ ...platform, status: 'loading', actionLoading: false })),
+)
+const selectedPlatform = ref<PlatformState | null>(null)
+const platformCredentials = reactive({ username: '', password: '' })
+
+const profileName = computed(() => userInfo.name || displayName.value || '同学')
+const profileEmail = computed(() => userInfo.email || '暂未填写邮箱')
+const connectedPlatformCount = computed(() => platforms.filter((item) => item.status === 'bound').length)
+
+function nullableValue(value: string): string | null {
+  return value.trim() || null
+}
+
+async function handleUnauthorized(error: unknown): Promise<boolean> {
+  if (!isAuthenticationError(error)) return false
+  clearSession()
+  await router.push('/login')
+  return true
+}
+
+async function loadUserInfo() {
+  profileLoading.value = true
+  try {
+    const currentUser = await authApi.getCurrentUser()
+    Object.assign(userInfo, currentUser)
+    setDisplayName(currentUser.name)
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '个人资料加载失败'))
+  } finally {
+    profileLoading.value = false
+  }
+}
+
+async function loadPlatformStatus(platform: PlatformState) {
+  platform.status = 'loading'
+  try {
+    const validity = await platformApi.getCookieValidity(platform.name)
+    platform.status = validity === null ? 'unbound' : validity ? 'bound' : 'invalid'
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    platform.status = 'error'
+  }
+}
+
+function openProfileEditor() {
+  editForm.email = userInfo.email ?? ''
+  editForm.qqchanId = ''
+  editForm.meetscheduleKey = ''
+  editForm.clearQqchanId = false
+  editForm.clearMeetscheduleKey = false
+  editDialogOpen.value = true
+}
+
+async function saveProfile() {
+  if (editForm.email && !/^\S+@\S+\.\S+$/.test(editForm.email)) {
+    message.warning('请输入有效的邮箱地址')
+    return
+  }
+
+  const input: UserInfoPatch = {
+    email: nullableValue(editForm.email),
+  }
+  if (editForm.clearQqchanId) input.qqchan_id = null
+  else if (editForm.qqchanId.trim()) input.qqchan_id = editForm.qqchanId.trim()
+  if (editForm.clearMeetscheduleKey) input.meetschedule_key = null
+  else if (editForm.meetscheduleKey.trim()) input.meetschedule_key = editForm.meetscheduleKey.trim()
+
+  savingProfile.value = true
+  try {
+    await authApi.updateUserInfo(input)
+    Object.assign(userInfo, await authApi.getCurrentUser())
+    editDialogOpen.value = false
+    message.success('个人资料已更新')
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '个人资料更新失败'))
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+async function openPlatformBinding(platform: PlatformState) {
+  platform.actionLoading = true
+  try {
+    bindAuthMethod.value = await platformApi.getAuthMethod(platform.name)
+    selectedPlatform.value = platform
+    platformCredentials.username = ''
+    platformCredentials.password = ''
+    bindDialogOpen.value = true
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '无法获取平台认证方式'))
+  } finally {
+    platform.actionLoading = false
+  }
+}
+
+async function submitPlatformBinding() {
+  if (!selectedPlatform.value || !bindAuthMethod.value) return
+  if (bindAuthMethod.value === 'password' && (!platformCredentials.username.trim() || !platformCredentials.password)) {
+    message.warning('请输入平台账号和密码')
+    return
+  }
+
+  bindLoading.value = true
+  const platform = selectedPlatform.value
+  try {
+    const credentials: PlatformCredentials = bindAuthMethod.value === 'password'
+      ? { username: platformCredentials.username.trim(), password: platformCredentials.password }
+      : {}
+    await platformApi.bind(platform.name, credentials)
+    bindDialogOpen.value = false
+    await loadPlatformStatus(platform)
+    message.success(`${platform.name}绑定完成`)
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '平台绑定失败'))
+  } finally {
+    bindLoading.value = false
+  }
+}
+
+async function unbindPlatform(platform: PlatformState) {
+  platform.actionLoading = true
+  try {
+    await platformApi.unbind(platform.name)
+    platform.status = 'unbound'
+    message.success(`已解绑${platform.name}`)
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '平台解绑失败'))
+  } finally {
+    platform.actionLoading = false
+  }
+}
+
+function platformStatusText(status: PlatformStatus): string {
+  return {
+    loading: '正在检查',
+    bound: '连接正常',
+    invalid: '授权已失效',
+    unbound: '尚未绑定',
+    error: '状态检查失败',
+  }[status]
+}
+
+async function leaveSession() {
+  if (logoutLoading.value) return
+  logoutLoading.value = true
+  try {
+    await authApi.logout()
+    clearSession()
+    await router.replace('/login')
+  } catch (error) {
+    message.error(getApiErrorMessage(error, '退出登录失败，请稍后重试'))
+  } finally {
+    logoutLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadUserInfo()
+  platforms.forEach(loadPlatformStatus)
+})
 </script>
 
 <template>
@@ -32,336 +229,281 @@ function showStaticTip(label: string) {
     <MainHeader />
 
     <main class="page-shell profile-main">
-      <h1>我的</h1>
+      <header class="page-heading">
+        <span>账号与连接</span>
+        <h1>我的</h1>
+        <p>管理个人资料、学习平台与提醒服务。</p>
+      </header>
 
-      <section class="surface-card profile-section identity-section">
-        <h2>基本信息</h2>
-        <div class="identity-row">
-          <div class="profile-avatar">张</div>
-          <div class="identity-copy">
-            <strong>张同学</strong>
-            <p><NIcon><MailOutline /></NIcon> zhang****@stu.example.edu.cn <i /> ID: 1002003004</p>
+      <div class="profile-grid">
+        <aside class="identity-card">
+          <div class="profile-avatar">{{ avatarText }}</div>
+          <h2>{{ profileName }}</h2>
+          <p><NIcon><MailOutline /></NIcon>{{ profileLoading ? '正在加载资料' : profileEmail }}</p>
+          <div class="identity-stats">
+            <div><strong>{{ connectedPlatformCount }}</strong><span>已连接平台</span></div>
+            <div><strong>{{ userInfo.qqchan_id ? 1 : 0 }}</strong><span>提醒服务</span></div>
           </div>
-          <NButton type="primary" ghost @click="showStaticTip('编辑资料')">编辑资料</NButton>
-        </div>
-      </section>
+          <NButton block type="primary" ghost :loading="profileLoading" @click="openProfileEditor">编辑个人资料</NButton>
+          <div class="security-note"><NIcon><ShieldCheckmarkOutline /></NIcon><span>您的所有的数据会经过加密处理。</span></div>
+          <button class="logout-button" type="button" :disabled="logoutLoading" @click="leaveSession">
+            <NIcon><LogOutOutline /></NIcon>{{ logoutLoading ? '正在退出…' : '退出登录' }}
+          </button>
+        </aside>
 
-      <section class="surface-card profile-section">
-        <h2>账号与安全</h2>
-        <div class="setting-row">
-          <div class="setting-label"><NIcon><LockClosedOutline /></NIcon><strong>登录密码</strong></div>
-          <div class="setting-value warning"><NIcon><WarningOutline /></NIcon>密码已太弱，建议立即重置</div>
-          <NButton size="small" type="primary" ghost @click="showStaticTip('修改密码')">修改</NButton>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label"><NIcon><MailOutline /></NIcon><strong>绑定邮箱</strong></div>
-          <div class="setting-value">zhang****@stu.example.edu.cn</div>
-          <NButton size="small" type="primary" ghost @click="showStaticTip('修改邮箱')">修改</NButton>
-        </div>
-      </section>
+        <div class="profile-content">
+          <section class="profile-card platform-card">
+            <header>
+              <div><span>数据来源</span><h2>学习平台</h2><p>绑定后，可在首页手动刷新各平台的作业。</p></div>
+              <strong>{{ connectedPlatformCount }}/{{ platforms.length }} 已连接</strong>
+            </header>
 
-      <section class="surface-card profile-section platform-section">
-        <h2>学习平台绑定</h2>
-        <div class="info-banner">
-          <NIcon :size="18"><InformationCircleOutline /></NIcon>
-          绑定学习平台时，我们会在提交前说明所需信息、用途与保存方式；仅在您确认授权后同步作业。
-        </div>
-        <div class="setting-row platform-row">
-          <div class="setting-label"><span class="platform-logo cqupt">邮</span><strong>学在重邮</strong></div>
-          <div class="setting-value bound">已绑定 <span>（zhang***）</span></div>
-          <NButton size="small" type="primary" ghost @click="showStaticTip('重新绑定')">重新绑定</NButton>
-        </div>
-        <div class="setting-row platform-row">
-          <div class="setting-label"><span class="platform-logo chaoxing">学</span><strong>学习通</strong></div>
-          <div class="setting-value bound">已绑定 <span>（138****5678）</span></div>
-          <NButton size="small" type="primary" ghost @click="showStaticTip('重新绑定')">重新绑定</NButton>
-        </div>
-        <div class="setting-row platform-row">
-          <div class="setting-label"><span class="platform-logo yuketang">雨</span><strong>雨课堂</strong></div>
-          <div class="setting-value warning"><NIcon><WarningOutline /></NIcon>授权已失效</div>
-          <NButton size="small" type="primary" ghost @click="showStaticTip('重新绑定')">重新绑定</NButton>
-        </div>
-      </section>
+            <div class="platform-list">
+              <article v-for="platform in platforms" :key="platform.name">
+                <span class="platform-logo" :class="platform.className">{{ platform.mark }}</span>
+                <div class="platform-copy">
+                  <strong>{{ platform.name }}</strong>
+                  <span
+                    class="status-text"
+                    :class="{
+                      connected: platform.status === 'bound',
+                      warning: platform.status === 'invalid' || platform.status === 'error',
+                    }"
+                  >
+                    <i />{{ platformStatusText(platform.status) }}
+                  </span>
+                </div>
+                <div class="platform-actions">
+                  <NButton
+                    v-if="platform.status === 'bound'"
+                    size="small"
+                    tertiary
+                    type="error"
+                    :loading="platform.actionLoading"
+                    @click="unbindPlatform(platform)"
+                  >解绑</NButton>
+                  <NButton
+                    v-else
+                    size="small"
+                    type="primary"
+                    ghost
+                    :loading="platform.actionLoading"
+                    @click="openPlatformBinding(platform)"
+                  >{{ platform.status === 'invalid' ? '重新绑定' : '绑定' }}</NButton>
+                </div>
+              </article>
+            </div>
+          </section>
 
-      <section class="surface-card profile-section">
-        <h2>同步与提醒</h2>
-        <button class="setting-row row-button" type="button" @click="showStaticTip('自动刷新频率')">
-          <span class="setting-label"><NIcon><RefreshOutline /></NIcon><strong>自动刷新频率</strong></span>
-          <span class="setting-value">每 30 分钟</span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-        <button class="setting-row row-button" type="button" @click="showStaticTip('QQChan 提醒')">
-          <span class="setting-label"><NIcon><AlarmOutline /></NIcon><strong>QQChan 提醒</strong></span>
-          <span class="setting-value bound">已启用 <span>（12345678）</span></span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-        <button class="setting-row row-button" type="button" @click="showStaticTip('提醒时间设置')">
-          <span class="setting-label"><NIcon><CalendarOutline /></NIcon><strong>提醒时间设置</strong></span>
-          <span class="setting-value">截止前 30 分钟、2 小时、当天 9:00</span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-        <button class="setting-row row-button" type="button" @click="showStaticTip('Meet 课程表同步')">
-          <span class="setting-label"><NIcon><LayersOutline /></NIcon><strong>Meet 课程表同步</strong></span>
-          <span class="setting-value bound">已连接 <span>（API Key）</span></span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-        <div class="setting-row">
-          <div class="setting-label"><NIcon><SyncOutline /></NIcon><strong>双向同步</strong></div>
-          <div class="setting-value">启用后，将课程表变更同步到聚合截止线</div>
-          <NSwitch v-model:value="syncEnabled" aria-label="双向同步开关" />
+          <section class="profile-card services-card">
+            <header><div><span>可选配置</span><h2>提醒与同步</h2><p>敏感字段已做脱敏处理，留空不会覆盖现有配置。</p></div><NButton size="small" type="primary" ghost @click="openProfileEditor">管理配置</NButton></header>
+            <div class="service-grid">
+              <article>
+                <span class="service-icon mail"><NIcon><MailOutline /></NIcon></span>
+                <div><strong>通知邮箱</strong><span>{{ userInfo.email || '未配置' }}</span></div>
+                <em :class="{ active: userInfo.email }">{{ userInfo.email ? '已配置' : '未配置' }}</em>
+              </article>
+              <article>
+                <span class="service-icon key"><NIcon><KeyOutline /></NIcon></span>
+                <div><strong>QQChan 提醒</strong><span>{{ userInfo.qqchan_id || '未配置' }}</span></div>
+                <em :class="{ active: userInfo.qqchan_id }">{{ userInfo.qqchan_id ? '已配置' : '未配置' }}</em>
+              </article>
+              <article>
+                <span class="service-icon layers"><NIcon><LayersOutline /></NIcon></span>
+                <div><strong>Meet 课程表</strong><span>{{ userInfo.meetschedule_key || '未配置' }}</span></div>
+                <em :class="{ active: userInfo.meetschedule_key }">{{ userInfo.meetschedule_key ? '已配置' : '未配置' }}</em>
+              </article>
+            </div>
+          </section>
+
+          <section class="privacy-strip">
+            <NIcon><InformationCircleOutline /></NIcon>
+            <div><strong>关于平台凭据</strong><span>平台凭据仅用于完成平台登录及 Cookie 失效后的重新认证。解绑平台会同时移除该平台的作业数据。</span></div>
+          </section>
         </div>
-      </section>
-
-      <section class="surface-card profile-section">
-        <h2>数据与隐私</h2>
-        <button class="setting-row row-button" type="button" @click="showStaticTip('授权与数据管理')">
-          <span class="setting-label"><NIcon><ShieldCheckmarkOutline /></NIcon><strong>授权与数据管理</strong></span>
-          <span class="setting-value">查看、撤销授权或删除数据</span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-        <button class="setting-row row-button" type="button" @click="router.push('/about')">
-          <span class="setting-label"><NIcon><KeyOutline /></NIcon><strong>数据与隐私说明</strong></span>
-          <span class="setting-value">查看我们如何使用与保护您的数据</span>
-          <NIcon><ChevronForwardOutline /></NIcon>
-        </button>
-      </section>
-
-      <button class="surface-card logout-button" type="button" @click="router.push('/login')">退出登录</button>
+      </div>
     </main>
+
+    <NModal v-model:show="editDialogOpen">
+      <NCard class="profile-dialog" title="编辑个人资料" :bordered="false" role="dialog" aria-modal="true">
+        <p class="dialog-description">留空保留现有配置，填写新值或明确勾选清除时更新配置。</p>
+        <NForm class="profile-form" label-placement="top">
+          <NFormItem label="邮箱">
+            <NInput v-model:value="editForm.email" placeholder="用于接收通知的邮箱" />
+          </NFormItem>
+          <NFormItem label="QQChan ID">
+            <div class="sensitive-field">
+              <NInput
+                v-model:value="editForm.qqchanId"
+                :disabled="editForm.clearQqchanId"
+                :placeholder="userInfo.qqchan_id ? '输入新值以替换现有配置' : '不使用可留空'"
+              />
+              <div v-if="userInfo.qqchan_id" class="sensitive-meta" :class="{ clearing: editForm.clearQqchanId }">
+                <span>{{ editForm.clearQqchanId ? '保存后将清除当前配置' : '已配置，留空则保持不变' }}</span>
+                <NCheckbox v-model:checked="editForm.clearQqchanId">清除此项</NCheckbox>
+              </div>
+            </div>
+          </NFormItem>
+          <NFormItem label="MeetSchedule Key">
+            <div class="sensitive-field">
+              <NInput
+                v-model:value="editForm.meetscheduleKey"
+                type="password"
+                show-password-on="click"
+                :disabled="editForm.clearMeetscheduleKey"
+                :placeholder="userInfo.meetschedule_key ? '输入新值以替换现有配置' : '不使用可留空'"
+              />
+              <div v-if="userInfo.meetschedule_key" class="sensitive-meta" :class="{ clearing: editForm.clearMeetscheduleKey }">
+                <span>{{ editForm.clearMeetscheduleKey ? '保存后将清除当前配置' : '已配置，留空则保持不变' }}</span>
+                <NCheckbox v-model:checked="editForm.clearMeetscheduleKey">清除此项</NCheckbox>
+              </div>
+            </div>
+          </NFormItem>
+        </NForm>
+        <div class="dialog-actions"><NButton @click="editDialogOpen = false">取消</NButton><NButton type="primary" :loading="savingProfile" @click="saveProfile">保存</NButton></div>
+      </NCard>
+    </NModal>
+
+    <NModal v-model:show="bindDialogOpen">
+      <NCard
+        class="profile-dialog"
+        :title="selectedPlatform ? `绑定${selectedPlatform.name}` : '绑定学习平台'"
+        :bordered="false"
+        role="dialog"
+        aria-modal="true"
+      >
+        <p class="dialog-description">
+          {{ bindAuthMethod === 'password'
+            ? '该平台需要独立账号密码。后端会使用凭据登录并加密保存，以便授权失效时重新认证。'
+            : '该平台使用当前重邮统一认证身份完成绑定，无需再次输入账号密码。' }}
+        </p>
+        <NForm v-if="bindAuthMethod === 'password'" label-placement="top">
+          <NFormItem label="平台账号"><NInput v-model:value="platformCredentials.username" autocomplete="username" /></NFormItem>
+          <NFormItem label="平台密码"><NInput v-model:value="platformCredentials.password" type="password" show-password-on="click" autocomplete="current-password" /></NFormItem>
+        </NForm>
+        <div class="dialog-actions"><NButton @click="bindDialogOpen = false">取消</NButton><NButton type="primary" :loading="bindLoading" @click="submitPlatformBinding">确认绑定</NButton></div>
+      </NCard>
+    </NModal>
   </div>
 </template>
 
 <style scoped>
-.profile-main {
-  width: min(1225px, calc(100% - 48px));
-  padding: 18px 0 42px;
+.profile-main { width: min(1180px, calc(100% - 48px)); padding: 36px 0 64px; }
+.page-heading { margin-bottom: 24px; }
+.page-heading > span { color: #75849a; font-size: 13px; font-weight: 650; }
+.page-heading h1 { margin: 5px 0 0; color: #172946; font-size: 36px; letter-spacing: -0.8px; }
+.page-heading p { margin: 8px 0 0; color: #75849a; font-size: 14px; }
+
+.profile-grid { display: grid; grid-template-columns: 290px minmax(0, 1fr); align-items: start; gap: 18px; }
+.identity-card,
+.profile-card,
+.privacy-strip { border: 1px solid #e1e7f0; border-radius: 16px; background: rgba(255, 255, 255, 0.97); box-shadow: var(--shadow); }
+.identity-card { position: sticky; top: 82px; display: flex; flex-direction: column; align-items: center; padding: 28px 22px 20px; text-align: center; }
+.profile-avatar { width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; border-radius: 22px; color: white; background: linear-gradient(145deg, #2d7df0, #145cca); box-shadow: 0 12px 24px rgba(23, 105, 232, 0.22); font-size: 28px; font-weight: 750; }
+.identity-card h2 { margin: 16px 0 5px; color: #1b2d49; font-size: 20px; }
+.identity-card > p { max-width: 100%; display: flex; align-items: center; gap: 6px; margin: 0; overflow: hidden; color: #7d899c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.identity-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; margin: 22px 0; border: solid #edf0f5; border-width: 1px 0; padding: 15px 0; }
+.identity-stats div { display: grid; gap: 4px; }
+.identity-stats div + div { border-left: 1px solid #edf0f5; }
+.identity-stats strong { color: #20324f; font-size: 20px; }
+.identity-stats span { color: #8a96a8; font-size: 10px; }
+.security-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 18px; border-radius: 11px; padding: 12px; color: #6e7d92; background: #f3f7fd; font-size: 10px; line-height: 1.65; text-align: left; }
+.security-note :deep(.n-icon) { flex: 0 0 auto; margin-top: 2px; color: #1769e8; font-size: 17px; }
+.logout-button { width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 12px; border: 0; border-radius: 9px; color: #c52d42; background: transparent; font-size: 12px; font-weight: 650; cursor: pointer; }
+.logout-button:hover { background: #fff0f2; }
+.logout-button:disabled { opacity: 0.55; cursor: wait; }
+
+.profile-content { display: grid; gap: 18px; }
+.profile-card { overflow: hidden; padding: 22px; }
+.profile-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid #edf0f5; }
+.profile-card header span { color: #8491a4; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.profile-card h2 { margin: 3px 0 0; color: #1d2f4b; font-size: 19px; }
+.profile-card header p { margin: 5px 0 0; color: #8491a4; font-size: 11px; }
+.platform-card > header > strong { border-radius: 999px; padding: 7px 10px; color: #1769e8; background: #edf4ff; font-size: 11px; white-space: nowrap; }
+
+.platform-list { display: grid; }
+.platform-list article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 78px; border-top: 1px solid #edf0f5; }
+.platform-list article:first-child { border-top: 0; }
+.platform-logo { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: white; font-size: 16px; font-weight: 750; }
+.platform-logo.cqupt { background: #1769e8; }
+.platform-logo.chaoxing { background: #d62c43; }
+.platform-logo.yuketang { background: #09988d; }
+.platform-copy { min-width: 0; display: grid; gap: 5px; }
+.platform-copy > strong { color: #2a3b56; font-size: 14px; }
+.status-text { display: flex; align-items: center; gap: 6px; color: #8793a5; font-size: 10px; }
+.status-text i { width: 6px; height: 6px; border-radius: 50%; background: #aab3c1; }
+.status-text.connected { color: #078777; }
+.status-text.connected i { background: #0da590; box-shadow: 0 0 0 3px #e6f7f3; }
+.status-text.warning { color: #cb4c23; }
+.status-text.warning i { background: #dc6133; box-shadow: 0 0 0 3px #fff0e8; }
+.platform-actions { display: flex; gap: 7px; }
+
+.services-card > header { align-items: center; }
+.service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 18px; }
+.service-grid article { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; border: 1px solid #e7ebf2; border-radius: 13px; padding: 13px; }
+.service-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 17px; }
+.service-icon.mail { color: #1769e8; background: #eaf1ff; }
+.service-icon.key { color: #b55b13; background: #fff1e4; }
+.service-icon.layers { color: #078777; background: #e8f7f4; }
+.service-grid article > div { min-width: 0; display: grid; gap: 4px; }
+.service-grid article > div strong { color: #34445e; font-size: 11px; }
+.service-grid article > div span { overflow: hidden; color: #929cab; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.service-grid em { grid-column: 2; justify-self: start; border-radius: 99px; padding: 4px 7px; color: #7d899c; background: #f0f3f7; font-size: 8px; font-style: normal; }
+.service-grid em.active { color: #078777; background: #e9f7f4; }
+
+.privacy-strip { display: flex; align-items: flex-start; gap: 13px; padding: 17px 19px; color: #68778d; box-shadow: none; }
+.privacy-strip :deep(.n-icon) { flex: 0 0 auto; color: #1769e8; font-size: 20px; }
+.privacy-strip div { display: grid; gap: 4px; }
+.privacy-strip strong { color: #354660; font-size: 12px; }
+.privacy-strip span { font-size: 10px; line-height: 1.65; }
+
+.profile-dialog { width: min(520px, calc(100vw - 28px)); border-radius: 16px; }
+.dialog-description { margin: -3px 0 18px; border-radius: 10px; padding: 11px 12px; color: #6b7a90; background: #f4f7fb; font-size: 11px; line-height: 1.65; }
+.profile-form :deep(.n-form-item-blank) { min-width: 0; }
+.sensitive-field { width: 100%; min-width: 0; display: grid; gap: 8px; }
+.sensitive-meta { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px; padding: 4px 8px 4px 10px; color: #7b889b; background: #f7f9fc; font-size: 10px; }
+.sensitive-meta.clearing { color: #bd3042; background: #fff2f4; }
+.sensitive-meta :deep(.n-checkbox) { flex: 0 0 auto; }
+.sensitive-meta :deep(.n-checkbox__label) { color: #59697f; font-size: 10px; }
+.sensitive-meta.clearing :deep(.n-checkbox__label) { color: #bd3042; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
+
+@media (max-width: 900px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .identity-card { position: static; align-items: flex-start; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px 16px; text-align: left; }
+  .profile-avatar { grid-row: 1 / span 2; width: 60px; height: 60px; border-radius: 17px; font-size: 22px; }
+  .identity-card h2 { align-self: end; margin: 0; }
+  .identity-card > p { align-self: start; }
+  .identity-stats { grid-column: 1 / -1; }
+  .identity-card > :deep(.n-button) { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+  .security-note,
+  .logout-button { grid-column: 1 / -1; }
 }
 
-.profile-main h1 {
-  margin: 0 0 10px;
-  font-size: 22px;
+@media (max-width: 680px) {
+  .profile-main { width: min(100% - 20px, 1180px); padding: 24px 0 44px; }
+  .page-heading h1 { font-size: 30px; }
+  .profile-grid,
+  .profile-content { gap: 12px; }
+  .identity-card { display: flex; align-items: center; text-align: center; }
+  .identity-card h2 { align-self: auto; margin: 16px 0 5px; }
+  .identity-card > p { align-self: auto; }
+  .identity-card > :deep(.n-button) { width: 100%; }
+  .security-note { text-align: left; }
+  .profile-card { padding: 17px 14px; }
+  .profile-card > header { align-items: flex-start; }
+  .platform-list article { gap: 11px; padding: 13px 0; }
+  .platform-logo { width: 40px; height: 40px; }
+  .platform-copy > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-text { white-space: nowrap; }
+  .platform-actions { min-width: 0; justify-self: end; }
+  .platform-actions :deep(.n-button) { min-height: 36px; padding: 0 11px; }
+  .service-grid { grid-template-columns: 1fr; }
 }
 
-.profile-section {
-  overflow: hidden;
-  margin-bottom: 10px;
-  padding: 0 12px;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(20, 51, 91, 0.05);
-}
-
-.profile-section h2 {
-  margin: 0;
-  padding: 10px 0 7px;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.identity-section {
-  padding-bottom: 8px;
-}
-
-.identity-row {
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 14px;
-}
-
-.profile-avatar {
-  width: 55px;
-  height: 55px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: white;
-  font-size: 25px;
-  background: linear-gradient(135deg, #2589ff, #0758e9);
-}
-
-.identity-copy strong {
-  font-size: 16px;
-}
-
-.identity-copy p {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 5px 0 0;
-  color: #72839d;
-  font-size: 12px;
-}
-
-.identity-copy i {
-  width: 1px;
-  height: 12px;
-  margin: 0 6px;
-  background: #c8d2df;
-}
-
-.setting-row {
-  width: 100%;
-  min-height: 38px;
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(280px, auto) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 0;
-  border: 0;
-  border-top: 1px solid #e5ebf3;
-  color: #112849;
-  background: transparent;
-  text-align: left;
-}
-
-.profile-section h2 + .setting-row,
-.info-banner + .setting-row {
-  border-top: 0;
-}
-
-.row-button {
-  cursor: pointer;
-}
-
-.row-button:hover {
-  background: #f8fbff;
-}
-
-.setting-label {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding-left: 9px;
-}
-
-.setting-label :deep(.n-icon) {
-  font-size: 17px;
-}
-
-.setting-label strong {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.setting-value {
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  color: #71829e;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.setting-value.warning {
-  color: #ff6412;
-}
-
-.setting-value.bound {
-  color: #039574;
-}
-
-.setting-value span {
-  color: #71829e;
-}
-
-.platform-section {
-  padding-bottom: 6px;
-}
-
-.info-banner {
-  min-height: 27px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 9px;
-  border: 1px solid #bdd8ff;
-  border-radius: 6px;
-  color: #176ce0;
-  background: #f0f6ff;
-  font-size: 11px;
-}
-
-.platform-row {
-  min-height: 40px;
-}
-
-.platform-logo {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.platform-logo.cqupt { background: #126fec; }
-.platform-logo.chaoxing { background: #e31b36; }
-.platform-logo.yuketang { border-radius: 7px; background: #0aa7a0; }
-
-.logout-button {
-  width: 100%;
-  height: 48px;
-  border-radius: 10px;
-  color: #ed2539;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.logout-button:hover {
-  background: #fff8f8;
-}
-
-@media (max-width: 768px) {
-  .profile-main {
-    width: calc(100% - 24px);
-    padding-top: 14px;
-  }
-
-  .identity-row {
-    grid-template-columns: auto 1fr;
-    padding-bottom: 10px;
-  }
-
-  .identity-row > :last-child {
-    grid-column: 1 / -1;
-    justify-self: stretch;
-  }
-
-  .identity-copy p {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .setting-row {
-    grid-template-columns: 1fr auto;
-    gap: 6px;
-    padding: 9px 0;
-  }
-
-  .setting-value {
-    grid-column: 1;
-    grid-row: 2;
-    justify-self: start;
-    padding-left: 40px;
-    white-space: normal;
-  }
-
-  .setting-row > :last-child {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-  }
-
-  .platform-row .setting-value {
-    padding-left: 51px;
-  }
-
-  .info-banner {
-    align-items: flex-start;
-    padding: 7px 9px;
-  }
+@media (max-width: 520px) {
+  .sensitive-meta { align-items: flex-start; flex-direction: column; gap: 5px; padding: 8px 10px; }
+  .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .dialog-actions :deep(.n-button) { width: 100%; }
 }
 </style>

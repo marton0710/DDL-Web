@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { NButton, NIcon, NInput } from 'naive-ui'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { NButton, NIcon, NInput, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
@@ -10,27 +10,75 @@ import {
   PersonOutline,
   ShieldCheckmarkOutline,
 } from '@vicons/ionicons5'
+import { authApi } from '../api/auth'
+import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
+import { getApiErrorMessage } from '../api/client'
+import { useSession } from '../state/session'
 
 const router = useRouter()
+const route = useRoute()
+const message = useMessage()
+const { setDisplayName } = useSession()
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const submitting = ref(false)
+const checkingSession = ref(true)
+const privacyVisible = ref(false)
 
-function submitLogin() {
-  router.push('/')
+function postLoginTarget(): string {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
+  if (!redirect.startsWith('/') || redirect.startsWith('//') || redirect === '/' || redirect === '/login') {
+    return '/home'
+  }
+  return redirect
 }
+
+async function redirectAuthenticatedUser() {
+  try {
+    const currentUser = await authApi.getCurrentUser()
+    setDisplayName(currentUser.name)
+    await router.replace(postLoginTarget())
+  } catch {
+    // 本地凭证不存在或失效时停留在登录页。
+  } finally {
+    checkingSession.value = false
+  }
+}
+
+async function submitLogin() {
+  if (!account.value.trim() || !password.value) {
+    message.warning('请输入学号和密码')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const result = await authApi.login({
+      username: account.value.trim(),
+      password: password.value,
+    })
+    setDisplayName(result.name)
+    password.value = ''
+    await router.replace(postLoginTarget())
+  } catch (error) {
+    message.error(getApiErrorMessage(error, '登录失败，请稍后重试'))
+  } finally {
+    submitting.value = false
+  }
+}
+
+onMounted(redirectAuthenticatedUser)
 </script>
 
 <template>
   <div class="login-page">
     <header class="login-header">
-      <RouterLink to="/" class="login-brand">
-        <img src="/assets/brand/logo-lockup-header.png" alt="聚合截止线" />
+      <RouterLink to="/login" class="login-brand">
+        <img src="/assets/brand/logo-lockup.png" alt="聚合截止线" />
       </RouterLink>
       <nav>
-        <RouterLink to="/about">关于项目</RouterLink>
-        <i />
-        <button type="button" @click="router.push('/about')">隐私说明</button>
+        <button type="button" @click="privacyVisible = true">隐私说明</button>
       </nav>
     </header>
 
@@ -43,11 +91,11 @@ function submitLogin() {
       <section class="login-card">
         <div class="login-card-heading">
           <h1>统一认证登录</h1>
-          <p>首次登录将自动注册，无需单独注册</p>
+          <p>首次使用，请务必仔细阅读隐私政策。</p>
         </div>
 
         <form @submit.prevent="submitLogin">
-          <NInput v-model:value="account" size="large" placeholder="学号 / 工号" aria-label="学号或工号">
+          <NInput v-model:value="account" size="large" placeholder="统一认证码 / 学号" aria-label="统一认证码或学号" autocomplete="username">
             <template #prefix><NIcon :size="25"><PersonOutline /></NIcon></template>
           </NInput>
           <NInput
@@ -56,6 +104,7 @@ function submitLogin() {
             :type="showPassword ? 'text' : 'password'"
             placeholder="密码"
             aria-label="密码"
+            autocomplete="current-password"
           >
             <template #prefix><NIcon :size="23"><LockClosedOutline /></NIcon></template>
             <template #suffix>
@@ -64,19 +113,30 @@ function submitLogin() {
               </button>
             </template>
           </NInput>
-          <NButton attr-type="submit" type="primary" size="large" block>登录</NButton>
+          <NButton
+            attr-type="submit"
+            type="primary"
+            size="large"
+            block
+            :loading="submitting || checkingSession"
+            :disabled="submitting || checkingSession"
+          >
+            登录
+          </NButton>
         </form>
 
         <div class="login-note primary-note">
           <NIcon :size="25"><ShieldCheckmarkOutline /></NIcon>
-          <span>此账号仅用于登录聚合截止线，不用于获取作业</span>
+          <span>本平台仅支持重庆邮电大学，请使用重庆邮电大学统一认证完成本平台登录。</span>
         </div>
         <div class="login-note">
           <NIcon :size="23"><LayersOutline /></NIcon>
-          <span>登录后，可在「我的」中按需绑定学习平台</span>
+          <span>登录后，可在「我的」中按需绑定学习平台获取作业</span>
         </div>
       </section>
     </main>
+
+    <PrivacyNoticeModal v-model:show="privacyVisible" />
   </div>
 </template>
 
@@ -84,37 +144,32 @@ function submitLogin() {
 .login-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 15% 58%, rgba(213, 229, 255, 0.38), transparent 23%),
-    linear-gradient(180deg, #fbfdff 0%, #f7faff 100%);
+    radial-gradient(circle at 16% 54%, rgba(217, 230, 249, 0.52), transparent 26%),
+    #f5f5f7;
 }
 
 .login-header {
-  height: 96px;
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 34px;
-  background: linear-gradient(110deg, #062e5b 0%, #031e40 68%, #042952 100%);
+  border-bottom: 1px solid rgba(31, 35, 43, 0.08);
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(18px);
 }
 
 .login-brand img {
   display: block;
-  height: 58px;
+  height: 43px;
   width: auto;
 }
 
 .login-header nav {
   display: flex;
   align-items: center;
-  gap: 26px;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 16px;
-}
-
-.login-header nav i {
-  width: 1px;
-  height: 25px;
-  background: rgba(255, 255, 255, 0.22);
+  color: #515154;
+  font-size: 13px;
 }
 
 .login-header nav button {
@@ -126,14 +181,14 @@ function submitLogin() {
 }
 
 .login-main {
-  width: min(1420px, calc(100% - 64px));
-  min-height: calc(100vh - 96px);
+  width: min(1180px, calc(100% - 64px));
+  min-height: calc(100vh - 68px);
   display: grid;
-  grid-template-columns: 1fr 0.95fr;
+  grid-template-columns: minmax(0, 1fr) 460px;
   align-items: center;
-  gap: 70px;
+  gap: 84px;
   margin: 0 auto;
-  padding: 52px 0 70px;
+  padding: 48px 0 64px;
 }
 
 .login-art {
@@ -145,8 +200,8 @@ function submitLogin() {
 
 .art-glow {
   position: absolute;
-  width: 520px;
-  height: 360px;
+  width: 470px;
+  height: 330px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(206, 225, 255, 0.62), rgba(229, 239, 255, 0.22) 60%, transparent 72%);
 }
@@ -154,48 +209,48 @@ function submitLogin() {
 .login-art img {
   position: relative;
   z-index: 1;
-  width: min(100%, 650px);
-  filter: drop-shadow(0 24px 24px rgba(58, 104, 164, 0.12));
+  width: min(100%, 540px);
+  filter: drop-shadow(0 22px 30px rgba(58, 104, 164, 0.1));
 }
 
 .login-card {
-  width: min(100%, 700px);
+  width: 100%;
   justify-self: center;
-  padding: 62px 50px 50px;
-  border: 1px solid #e0e7f1;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 22px 52px rgba(40, 74, 119, 0.09);
+  padding: 42px 38px 34px;
+  border: 1px solid rgba(31, 35, 43, 0.09);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.065);
 }
 
 .login-card-heading {
-  margin-bottom: 34px;
-  text-align: center;
+  margin-bottom: 28px;
 }
 
 .login-card h1 {
-  margin: 0 0 12px;
-  font-size: 35px;
-  letter-spacing: 1px;
+  margin: 0 0 9px;
+  color: #1d1d1f;
+  font-size: 31px;
+  letter-spacing: -0.7px;
 }
 
 .login-card-heading p {
   margin: 0;
-  color: #7584a0;
-  font-size: 17px;
+  color: #6e6e73;
+  font-size: 14px;
 }
 
 .login-card form {
   display: grid;
-  gap: 22px;
+  gap: 15px;
 }
 
 .login-card form :deep(.n-input) {
-  --n-height: 64px !important;
-  height: 64px;
-  min-height: 64px;
-  border-radius: 9px;
-  font-size: 18px;
+  --n-height: 52px !important;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 15px;
 }
 
 .login-card form :deep(.n-input-wrapper) {
@@ -216,10 +271,11 @@ function submitLogin() {
 }
 
 .login-card form :deep(.n-button) {
-  height: 62px;
-  font-size: 21px;
+  height: 50px;
+  border-radius: 12px;
+  font-size: 16px;
   font-weight: 600;
-  background: linear-gradient(135deg, #106df6, #0758ef);
+  background: #1769e8;
 }
 
 .password-toggle {
@@ -238,18 +294,18 @@ function submitLogin() {
   display: flex;
   align-items: center;
   gap: 13px;
-  margin-top: 26px;
-  color: #71819d;
-  font-size: 15px;
+  margin-top: 18px;
+  color: #77777c;
+  font-size: 11px;
 }
 
 .login-note.primary-note {
-  min-height: 60px;
-  padding: 0 18px;
-  border: 1px solid #bcd8ff;
-  border-radius: 8px;
-  color: #4d6588;
-  background: #f2f7ff;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1px solid #d7e4f7;
+  border-radius: 11px;
+  color: #596a82;
+  background: #f3f7fd;
 }
 
 .login-note.primary-note :deep(.n-icon) {
@@ -258,17 +314,17 @@ function submitLogin() {
 
 @media (max-width: 900px) {
   .login-header {
-    height: 70px;
+    height: 62px;
     padding: 0 20px;
   }
 
   .login-brand img {
-    height: 42px;
+    height: 38px;
   }
 
   .login-main {
     width: min(100% - 32px, 650px);
-    min-height: calc(100vh - 70px);
+    min-height: calc(100vh - 62px);
     grid-template-columns: 1fr;
     padding: 35px 0 50px;
   }
@@ -278,19 +334,13 @@ function submitLogin() {
   }
 
   .login-card {
-    padding: 42px 32px 34px;
+    padding: 38px 32px 32px;
   }
 }
 
 @media (max-width: 520px) {
   .login-header nav {
-    gap: 12px;
     font-size: 13px;
-  }
-
-  .login-header nav i,
-  .login-header nav button {
-    display: none;
   }
 
   .login-card {
