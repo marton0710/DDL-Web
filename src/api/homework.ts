@@ -1,8 +1,8 @@
 import { apiRequest } from './client'
 import type {
   HomeworkQuery,
-  HomeworkRefreshResult,
   HomeworkResponse,
+  PlatformName,
 } from './types'
 
 function homeworkUrl(query: HomeworkQuery = {}): string {
@@ -21,8 +21,11 @@ export const homeworkApi = {
     return apiRequest<HomeworkResponse>(homeworkUrl(query))
   },
 
-  refresh() {
-    return apiRequest<HomeworkRefreshResult>('/api/homework/refresh', {
+  refresh(platform?: PlatformName) {
+    const query = platform
+      ? `?${new URLSearchParams({ platform }).toString()}`
+      : ''
+    return apiRequest<string[]>(`/api/homework/refresh${query}`, {
       method: 'POST',
     })
   },

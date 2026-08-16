@@ -73,8 +73,17 @@ const completionRate = computed(() => (
   statistics.value.all ? Math.round((statistics.value.done / statistics.value.all) * 100) : 0
 ))
 
-function compareHomeworks(left: Homework, right: Homework): number {
-  if (left.done !== right.done) return left.done ? 1 : -1
+function homeworkSortGroup(homework: Homework, now: number): number {
+  if (homework.done) return 3
+
+  const deadline = parseDeadline(homework.deadline)
+  if (!deadline) return 1
+  return deadline.getTime() < now ? 2 : 0
+}
+
+function compareHomeworks(left: Homework, right: Homework, now: number): number {
+  const groupDifference = homeworkSortGroup(left, now) - homeworkSortGroup(right, now)
+  if (groupDifference !== 0) return groupDifference
 
   const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
   const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
@@ -83,6 +92,7 @@ function compareHomeworks(left: Homework, right: Homework): number {
 
 const filteredHomeworks = computed(() => {
   const normalizedKeyword = keyword.value.trim().toLocaleLowerCase('zh-CN')
+  const now = Date.now()
 
   return homeworks.value
     .filter((homework) => {
@@ -100,7 +110,7 @@ const filteredHomeworks = computed(() => {
       if (taskFilter.value === 'done') return state === 'done'
       return true
     })
-    .sort(compareHomeworks)
+    .sort((left, right) => compareHomeworks(left, right, now))
 })
 
 const hasActiveFilters = computed(() => (
@@ -123,7 +133,11 @@ const visiblePages = computed(() => {
 
 const priorityHomework = computed(() =>
   homeworks.value
-    .filter((item) => !item.done && getHomeworkState(item) !== 'overdue')
+    .filter((item) => (
+      !item.done
+      && parseDeadline(item.deadline) !== null
+      && getHomeworkState(item) !== 'overdue'
+    ))
     .sort((left, right) => {
       const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
       const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
@@ -289,7 +303,7 @@ onMounted(loadHomeworks)
             </template>
             <template v-else>
               <strong>暂无临近截止</strong>
-              <p>逾期作业不会进入优先关注，可在下方列表中查看。</p>
+              <p>逾期或无截止期限的作业不会进入优先关注。</p>
             </template>
           </div>
           <b v-if="priorityHomework" class="focus-remaining" :class="getHomeworkState(priorityHomework)">

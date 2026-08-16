@@ -6,11 +6,10 @@ import {
   InformationCircleOutline,
   KeyOutline,
   LayersOutline,
-  LogOutOutline,
   MailOutline,
-  ShieldCheckmarkOutline,
   WarningOutline,
 } from '@vicons/ionicons5'
+import AccountActions from '../components/AccountActions.vue'
 import MainHeader from '../components/MainHeader.vue'
 import { authApi } from '../api/auth'
 import { getApiErrorMessage, isAuthenticationError } from '../api/client'
@@ -32,7 +31,6 @@ const savingProfile = ref(false)
 const editDialogOpen = ref(false)
 const bindDialogOpen = ref(false)
 const bindLoading = ref(false)
-const logoutLoading = ref(false)
 const bindAuthMethod = ref<PlatformAuthMethod | null>(null)
 
 const userInfo = reactive<CurrentUser>({
@@ -77,15 +75,17 @@ async function handleUnauthorized(error: unknown): Promise<boolean> {
   return true
 }
 
-async function loadUserInfo() {
+async function loadUserInfo(): Promise<boolean> {
   profileLoading.value = true
   try {
     const currentUser = await authApi.getCurrentUser()
     Object.assign(userInfo, currentUser)
     setDisplayName(currentUser.name)
+    return true
   } catch (error) {
-    if (await handleUnauthorized(error)) return
+    if (await handleUnauthorized(error)) return false
     message.error(getApiErrorMessage(error, '个人资料加载失败'))
+    return false
   } finally {
     profileLoading.value = false
   }
@@ -128,7 +128,9 @@ async function saveProfile() {
   savingProfile.value = true
   try {
     await authApi.updateUserInfo(input)
-    Object.assign(userInfo, await authApi.getCurrentUser())
+    const currentUser = await authApi.getCurrentUser()
+    Object.assign(userInfo, currentUser)
+    setDisplayName(currentUser.name)
     editDialogOpen.value = false
     message.success('个人资料已更新')
   } catch (error) {
@@ -169,8 +171,8 @@ async function submitPlatformBinding() {
       ? { username: platformCredentials.username.trim(), password: platformCredentials.password }
       : {}
     await platformApi.bind(platform.name, credentials)
+    platform.status = 'bound'
     bindDialogOpen.value = false
-    await loadPlatformStatus(platform)
     message.success(`${platform.name}绑定完成`)
   } catch (error) {
     if (await handleUnauthorized(error)) return
@@ -204,23 +206,9 @@ function platformStatusText(status: PlatformStatus): string {
   }[status]
 }
 
-async function leaveSession() {
-  if (logoutLoading.value) return
-  logoutLoading.value = true
-  try {
-    await authApi.logout()
-    clearSession()
-    await router.replace('/login')
-  } catch (error) {
-    message.error(getApiErrorMessage(error, '退出登录失败，请稍后重试'))
-  } finally {
-    logoutLoading.value = false
-  }
-}
-
-onMounted(() => {
-  loadUserInfo()
-  platforms.forEach(loadPlatformStatus)
+onMounted(async () => {
+  if (!await loadUserInfo()) return
+  await Promise.all(platforms.map(loadPlatformStatus))
 })
 </script>
 
@@ -236,20 +224,21 @@ onMounted(() => {
       </header>
 
       <div class="profile-grid">
-        <aside class="identity-card">
-          <div class="profile-avatar">{{ avatarText }}</div>
-          <h2>{{ profileName }}</h2>
-          <p><NIcon><MailOutline /></NIcon>{{ profileLoading ? '正在加载资料' : profileEmail }}</p>
-          <div class="identity-stats">
-            <div><strong>{{ connectedPlatformCount }}</strong><span>已连接平台</span></div>
-            <div><strong>{{ userInfo.qqchan_id ? 1 : 0 }}</strong><span>提醒服务</span></div>
+        <div class="profile-sidebar">
+          <aside class="identity-card">
+            <div class="profile-avatar">{{ avatarText }}</div>
+            <h2>{{ profileName }}</h2>
+            <p><NIcon><MailOutline /></NIcon>{{ profileLoading ? '正在加载资料' : profileEmail }}</p>
+            <div class="identity-stats">
+              <div><strong>{{ connectedPlatformCount }}</strong><span>已连接平台</span></div>
+              <div><strong>{{ userInfo.qqchan_id ? 1 : 0 }}</strong><span>提醒服务</span></div>
+            </div>
+            <NButton block type="primary" ghost :loading="profileLoading" @click="openProfileEditor">编辑个人资料</NButton>
+          </aside>
+          <div class="desktop-account-actions">
+            <AccountActions :username="userInfo.name" />
           </div>
-          <NButton block type="primary" ghost :loading="profileLoading" @click="openProfileEditor">编辑个人资料</NButton>
-          <div class="security-note"><NIcon><ShieldCheckmarkOutline /></NIcon><span>您的所有的数据会经过加密处理。</span></div>
-          <button class="logout-button" type="button" :disabled="logoutLoading" @click="leaveSession">
-            <NIcon><LogOutOutline /></NIcon>{{ logoutLoading ? '正在退出…' : '退出登录' }}
-          </button>
-        </aside>
+        </div>
 
         <div class="profile-content">
           <section class="profile-card platform-card">
@@ -296,7 +285,7 @@ onMounted(() => {
           </section>
 
           <section class="profile-card services-card">
-            <header><div><span>可选配置</span><h2>提醒与同步</h2><p>敏感字段已做脱敏处理，留空不会覆盖现有配置。</p></div><NButton size="small" type="primary" ghost @click="openProfileEditor">管理配置</NButton></header>
+            <header><div><span>可选配置</span><h2>提醒与同步</h2><p>敏感字段已做脱敏处理，留空不会覆盖现有配置。</p></div></header>
             <div class="service-grid">
               <article>
                 <span class="service-icon mail"><NIcon><MailOutline /></NIcon></span>
@@ -318,7 +307,7 @@ onMounted(() => {
 
           <section class="privacy-strip">
             <NIcon><InformationCircleOutline /></NIcon>
-            <div><strong>关于平台凭据</strong><span>平台凭据仅用于完成平台登录及 Cookie 失效后的重新认证。解绑平台会同时移除该平台的作业数据。</span></div>
+            <div><strong>关于平台凭据</strong><span>平台凭据仅用于完成平台登录及 Cookie 失效后的重新认证。解绑平台会同时移除该平台的作业数据和平台凭据。</span></div>
           </section>
         </div>
       </div>
@@ -395,10 +384,11 @@ onMounted(() => {
 .page-heading p { margin: 8px 0 0; color: #75849a; font-size: 14px; }
 
 .profile-grid { display: grid; grid-template-columns: 290px minmax(0, 1fr); align-items: start; gap: 18px; }
+.profile-sidebar { position: sticky; top: 82px; display: grid; gap: 10px; }
 .identity-card,
 .profile-card,
 .privacy-strip { border: 1px solid #e1e7f0; border-radius: 16px; background: rgba(255, 255, 255, 0.97); box-shadow: var(--shadow); }
-.identity-card { position: sticky; top: 82px; display: flex; flex-direction: column; align-items: center; padding: 28px 22px 20px; text-align: center; }
+.identity-card { display: flex; flex-direction: column; align-items: center; padding: 28px 22px 20px; text-align: center; }
 .profile-avatar { width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; border-radius: 22px; color: white; background: linear-gradient(145deg, #2d7df0, #145cca); box-shadow: 0 12px 24px rgba(23, 105, 232, 0.22); font-size: 28px; font-weight: 750; }
 .identity-card h2 { margin: 16px 0 5px; color: #1b2d49; font-size: 20px; }
 .identity-card > p { max-width: 100%; display: flex; align-items: center; gap: 6px; margin: 0; overflow: hidden; color: #7d899c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -407,11 +397,6 @@ onMounted(() => {
 .identity-stats div + div { border-left: 1px solid #edf0f5; }
 .identity-stats strong { color: #20324f; font-size: 20px; }
 .identity-stats span { color: #8a96a8; font-size: 10px; }
-.security-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 18px; border-radius: 11px; padding: 12px; color: #6e7d92; background: #f3f7fd; font-size: 10px; line-height: 1.65; text-align: left; }
-.security-note :deep(.n-icon) { flex: 0 0 auto; margin-top: 2px; color: #1769e8; font-size: 17px; }
-.logout-button { width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 12px; border: 0; border-radius: 9px; color: #c52d42; background: transparent; font-size: 12px; font-weight: 650; cursor: pointer; }
-.logout-button:hover { background: #fff0f2; }
-.logout-button:disabled { opacity: 0.55; cursor: wait; }
 
 .profile-content { display: grid; gap: 18px; }
 .profile-card { overflow: hidden; padding: 22px; }
@@ -470,14 +455,17 @@ onMounted(() => {
 
 @media (max-width: 900px) {
   .profile-grid { grid-template-columns: 1fr; }
+  .profile-sidebar { position: static; }
   .identity-card { position: static; align-items: flex-start; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px 16px; text-align: left; }
   .profile-avatar { grid-row: 1 / span 2; width: 60px; height: 60px; border-radius: 17px; font-size: 22px; }
   .identity-card h2 { align-self: end; margin: 0; }
   .identity-card > p { align-self: start; }
   .identity-stats { grid-column: 1 / -1; }
   .identity-card > :deep(.n-button) { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
-  .security-note,
-  .logout-button { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .desktop-account-actions { display: none; }
 }
 
 @media (max-width: 680px) {
@@ -489,7 +477,6 @@ onMounted(() => {
   .identity-card h2 { align-self: auto; margin: 16px 0 5px; }
   .identity-card > p { align-self: auto; }
   .identity-card > :deep(.n-button) { width: 100%; }
-  .security-note { text-align: left; }
   .profile-card { padding: 17px 14px; }
   .profile-card > header { align-items: flex-start; }
   .platform-list article { gap: 11px; padding: 13px 0; }

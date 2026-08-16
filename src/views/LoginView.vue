@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NIcon, NInput, useMessage } from 'naive-ui'
+import { NButton, NCheckbox, NIcon, NInput, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
@@ -12,19 +12,20 @@ import {
 } from '@vicons/ionicons5'
 import { authApi } from '../api/auth'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
-import { getApiErrorMessage } from '../api/client'
+import { getApiErrorMessage, isAuthenticationError } from '../api/client'
 import { useSession } from '../state/session'
 
 const router = useRouter()
 const route = useRoute()
 const message = useMessage()
-const { setDisplayName } = useSession()
+const { clearSession, setDisplayName } = useSession()
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const submitting = ref(false)
 const checkingSession = ref(true)
 const privacyVisible = ref(false)
+const privacyAccepted = ref(false)
 
 function postLoginTarget(): string {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
@@ -39,7 +40,8 @@ async function redirectAuthenticatedUser() {
     const currentUser = await authApi.getCurrentUser()
     setDisplayName(currentUser.name)
     await router.replace(postLoginTarget())
-  } catch {
+  } catch (error) {
+    if (isAuthenticationError(error)) clearSession()
     // 本地凭证不存在或失效时停留在登录页。
   } finally {
     checkingSession.value = false
@@ -49,6 +51,10 @@ async function redirectAuthenticatedUser() {
 async function submitLogin() {
   if (!account.value.trim() || !password.value) {
     message.warning('请输入学号和密码')
+    return
+  }
+  if (!privacyAccepted.value) {
+    message.warning('请先阅读并确认隐私说明')
     return
   }
 
@@ -77,9 +83,6 @@ onMounted(redirectAuthenticatedUser)
       <RouterLink to="/login" class="login-brand">
         <img src="/assets/brand/logo-lockup.png" alt="聚合截止线" />
       </RouterLink>
-      <nav>
-        <button type="button" @click="privacyVisible = true">隐私说明</button>
-      </nav>
     </header>
 
     <main class="login-main">
@@ -95,7 +98,7 @@ onMounted(redirectAuthenticatedUser)
         </div>
 
         <form @submit.prevent="submitLogin">
-          <NInput v-model:value="account" size="large" placeholder="统一认证码 / 学号" aria-label="统一认证码或学号" autocomplete="username">
+          <NInput v-model:value="account" size="large" placeholder="统一认证码" aria-label="统一认证码" autocomplete="username">
             <template #prefix><NIcon :size="25"><PersonOutline /></NIcon></template>
           </NInput>
           <NInput
@@ -113,13 +116,17 @@ onMounted(redirectAuthenticatedUser)
               </button>
             </template>
           </NInput>
+          <div class="privacy-consent">
+            <NCheckbox v-model:checked="privacyAccepted">我已知晓</NCheckbox>
+            <button type="button" @click="privacyVisible = true">《隐私说明》</button>
+          </div>
           <NButton
             attr-type="submit"
             type="primary"
             size="large"
             block
             :loading="submitting || checkingSession"
-            :disabled="submitting || checkingSession"
+            :disabled="submitting || checkingSession || !privacyAccepted"
           >
             登录
           </NButton>
@@ -152,7 +159,7 @@ onMounted(redirectAuthenticatedUser)
   height: 68px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   border-bottom: 1px solid rgba(31, 35, 43, 0.08);
   padding: 0 28px;
   background: rgba(255, 255, 255, 0.84);
@@ -163,21 +170,6 @@ onMounted(redirectAuthenticatedUser)
   display: block;
   height: 43px;
   width: auto;
-}
-
-.login-header nav {
-  display: flex;
-  align-items: center;
-  color: #515154;
-  font-size: 13px;
-}
-
-.login-header nav button {
-  border: 0;
-  padding: 0;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
 }
 
 .login-main {
@@ -290,6 +282,35 @@ onMounted(redirectAuthenticatedUser)
   cursor: pointer;
 }
 
+.privacy-consent {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #6e7d92;
+  font-size: 12px;
+}
+
+.privacy-consent :deep(.n-checkbox__label) {
+  padding-right: 2px;
+  color: #6e7d92;
+  font-size: 12px;
+}
+
+.privacy-consent button {
+  border: 0;
+  padding: 2px;
+  color: #1769e8;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.privacy-consent button:hover,
+.privacy-consent button:focus-visible {
+  outline: none;
+  text-decoration: underline;
+}
+
 .login-note {
   display: flex;
   align-items: center;
@@ -339,10 +360,6 @@ onMounted(redirectAuthenticatedUser)
 }
 
 @media (max-width: 520px) {
-  .login-header nav {
-    font-size: 13px;
-  }
-
   .login-card {
     padding: 34px 20px 28px;
   }

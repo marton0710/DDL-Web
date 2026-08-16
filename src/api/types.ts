@@ -53,5 +53,3 @@ export interface PasswordCredentials {
 }
 
 export type PlatformCredentials = PasswordCredentials | Record<string, never>
-export type PlatformCookieValidity = boolean | null
-export type HomeworkRefreshResult = string[]

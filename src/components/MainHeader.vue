@@ -1,33 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { NDrawer, NDrawerContent, NIcon, useMessage } from 'naive-ui'
-import { LogOutOutline, MenuOutline, PersonOutline } from '@vicons/ionicons5'
-import { authApi } from '../api/auth'
-import { getApiErrorMessage } from '../api/client'
+import { useRoute } from 'vue-router'
+import { NDrawer, NDrawerContent, NIcon } from 'naive-ui'
+import { MenuOutline, PersonOutline } from '@vicons/ionicons5'
+import AccountActions from './AccountActions.vue'
 import { useSession } from '../state/session'
 
 const route = useRoute()
-const router = useRouter()
-const message = useMessage()
-const { avatarText, displayName, clearSession } = useSession()
+const { avatarText, displayName } = useSession()
 const mobileOpen = ref(false)
-const loggingOut = ref(false)
-
-async function leaveSession() {
-  if (loggingOut.value) return
-  loggingOut.value = true
-  try {
-    await authApi.logout()
-    clearSession()
-    mobileOpen.value = false
-    await router.replace('/login')
-  } catch (error) {
-    message.error(getApiErrorMessage(error, '退出登录失败，请稍后重试'))
-  } finally {
-    loggingOut.value = false
-  }
-}
 </script>
 
 <template>
@@ -64,10 +45,23 @@ async function leaveSession() {
         <RouterLink to="/home" @click="mobileOpen = false">作业</RouterLink>
         <RouterLink to="/profile" @click="mobileOpen = false"><NIcon><PersonOutline /></NIcon>我的</RouterLink>
         <RouterLink to="/about" @click="mobileOpen = false">关于项目</RouterLink>
-        <button class="mobile-logout" type="button" :disabled="loggingOut" @click="leaveSession">
-          <NIcon><LogOutOutline /></NIcon>{{ loggingOut ? '正在退出…' : '退出登录' }}
-        </button>
       </nav>
+      <div class="mobile-session-action">
+        <AccountActions
+          variant="mobile"
+          :username="displayName"
+          :show-deletion="false"
+        />
+      </div>
+      <template #footer>
+        <div class="mobile-delete-action">
+          <AccountActions
+            variant="mobile"
+            :username="displayName"
+            :show-logout="false"
+          />
+        </div>
+      </template>
     </NDrawerContent>
   </NDrawer>
 </template>
@@ -147,11 +141,10 @@ async function leaveSession() {
 .drawer-profile small { margin-top: 2px; color: #8a96a8; font-size: 10px; }
 
 .mobile-nav { display: grid; gap: 7px; }
-.mobile-nav a,
-.mobile-logout { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 10px; padding: 0 13px; color: #536178; background: transparent; font-size: 13px; font-weight: 650; text-align: left; cursor: pointer; }
+.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 10px; padding: 0 13px; color: #536178; background: transparent; font-size: 13px; font-weight: 650; text-align: left; cursor: pointer; }
 .mobile-nav a.router-link-active { color: #1769e8; background: #eaf1ff; }
-.mobile-logout { margin-top: 12px; color: #c92a3f; background: #fff1f3; }
-.mobile-logout:disabled { opacity: 0.6; cursor: wait; }
+.mobile-session-action { margin-top: 12px; border-top: 1px solid #edf1f6; padding-top: 12px; }
+.mobile-delete-action { width: 100%; }
 
 @media (max-width: 720px) {
   .site-header { height: 58px; }

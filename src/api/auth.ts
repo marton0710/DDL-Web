@@ -6,25 +6,32 @@ export const authApi = {
     return apiRequest<LoginResult>('/api/auth/login', {
       method: 'POST',
       body: input,
-      authentication: 'none',
-    })
-  },
-
-  logout() {
-    return apiRequest<void>('/api/auth/logout', {
-      method: 'POST',
-      authentication: 'none',
+      retryUnauthorized: false,
     })
   },
 
   getCurrentUser() {
-    return apiRequest<CurrentUser>('/api/auth/me')
+    return apiRequest<CurrentUser>('/api/auth/me', {
+      retryUnauthorized: false,
+    })
   },
 
   updateUserInfo(input: UserInfoPatch) {
     return apiRequest<void>('/api/auth/userinfo', {
       method: 'PATCH',
       body: input,
+    })
+  },
+
+  logout() {
+    return apiRequest<void>('/api/auth/logout', {
+      method: 'POST',
+    })
+  },
+
+  deleteAccount() {
+    return apiRequest<void>('/api/auth/me', {
+      method: 'DELETE',
     })
   },
 }

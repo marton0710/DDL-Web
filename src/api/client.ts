@@ -1,10 +1,11 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 
-type AuthenticationMode = 'auto' | 'none' | 'resource'
-
-interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'credentials'> {
+interface RequestOptions extends Omit<RequestInit, 'body' | 'credentials'> {
   body?: unknown
-  authentication?: AuthenticationMode
+}
+
+interface ApiRequestOptions extends RequestOptions {
+  retryUnauthorized?: boolean
 }
 
 interface ValidationIssue {
@@ -60,13 +61,8 @@ async function readResponseBody(response: Response): Promise<unknown> {
   return contentType.includes('application/json') ? JSON.parse(text) : text
 }
 
-async function sendRequest<T>(path: string, options: ApiRequestOptions): Promise<T> {
-  const {
-    authentication: _authentication,
-    body,
-    headers: initialHeaders,
-    ...requestInit
-  } = options
+async function sendRequest<T>(path: string, options: RequestOptions): Promise<T> {
+  const { body, headers: initialHeaders, ...requestInit } = options
   const headers = new Headers(initialHeaders)
 
   if (body !== undefined && !headers.has('Content-Type')) {
@@ -96,7 +92,6 @@ function refreshSession(): Promise<void> {
   if (!sessionRefreshPromise) {
     sessionRefreshPromise = sendRequest<void>('/api/auth/refresh', {
       method: 'POST',
-      authentication: 'none',
     }).finally(() => {
       sessionRefreshPromise = null
     })
@@ -105,21 +100,22 @@ function refreshSession(): Promise<void> {
 }
 
 function isRefreshCredentialError(error: unknown): boolean {
-  return error instanceof ApiError && [401, 403, 422].includes(error.status)
+  return error instanceof ApiError && (error.status === 401 || error.status === 422)
 }
 
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const authentication = options.authentication ?? 'auto'
+  const { retryUnauthorized = true, ...requestOptions } = options
 
   try {
-    return await sendRequest<T>(path, options)
+    return await sendRequest<T>(path, requestOptions)
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 401 || authentication === 'none') {
+    if (!(error instanceof ApiError) || error.status !== 401) {
       throw error
     }
+    if (!retryUnauthorized) throw new AuthenticationError(error)
 
     try {
       await refreshSession()
@@ -129,13 +125,9 @@ export async function apiRequest<T>(
     }
 
     try {
-      return await sendRequest<T>(path, { ...options, authentication: 'none' })
+      return await sendRequest<T>(path, requestOptions)
     } catch (retryError) {
-      if (
-        retryError instanceof ApiError
-        && retryError.status === 401
-        && authentication === 'auto'
-      ) {
+      if (retryError instanceof ApiError && retryError.status === 401) {
         throw new AuthenticationError(retryError)
       }
       throw retryError
