@@ -14,13 +14,11 @@ export interface LoginResult {
 
 export interface CurrentUser {
   name: string
-  email: string | null
   qqchan_id: string | null
   meetschedule_key: string | null
 }
 
-export interface UserInfoPatch {
-  email?: string | null
+export interface UserBindingPatch {
   qqchan_id?: string | null
   meetschedule_key?: string | null
 }

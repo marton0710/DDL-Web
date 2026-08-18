@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { NButton, NIcon } from 'naive-ui'
 import {
   AlarmOutline,
-  CheckmarkDoneOutline,
   ClipboardOutline,
   InformationCircleOutline,
   RefreshOutline,
@@ -13,7 +11,6 @@ import {
 import MainHeader from '../components/MainHeader.vue'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
 
-const router = useRouter()
 const privacyVisible = ref(false)
 </script>
 
@@ -45,7 +42,7 @@ const privacyVisible = ref(false)
             </article>
             <article class="surface-card feature-card">
               <span class="icon-circle feature-icon teal"><NIcon :size="30"><RefreshOutline /></NIcon></span>
-              <div><h3>同步扩展</h3><p>支持 QQ 提醒与 Meet 课程表同步。</p></div>
+              <div><h3>同步扩展</h3><p>支持 QQ机器人提醒与 Meet 课程表同步。</p></div>
             </article>
           </div>
         </section>
@@ -54,7 +51,7 @@ const privacyVisible = ref(false)
           <h2 class="section-title">数据与隐私</h2>
           <button class="surface-card privacy-entry" type="button" @click="privacyVisible = true">
             <span class="privacy-entry-icon"><NIcon :size="27"><ShieldCheckmarkOutline /></NIcon></span>
-            <span><strong>查看隐私说明</strong><small>了解系统处理的信息、使用目的、保存方式和您的控制选项。</small></span>
+            <span><strong>查看隐私政策</strong><small>了解系统处理的信息、使用目的、保存方式和您的控制选项。</small></span>
             <em>查看详情</em>
           </button>
         </section>
@@ -62,10 +59,6 @@ const privacyVisible = ref(false)
         <section class="surface-card project-card">
           <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网页版本</strong><span>v1.0.0</span></div>
           <div class="project-actions">
-            <NButton size="large" type="primary" ghost @click="router.push('/home')">
-              <template #icon><NIcon><ClipboardOutline /></NIcon></template>
-              查看作业
-            </NButton>
             <NButton
               tag="a"
               href="https://github.com/marton0710/CQUPTDDL/issues"
@@ -78,7 +71,6 @@ const privacyVisible = ref(false)
               如有建议，欢迎反馈给我们
             </NButton>
           </div>
-          <!-- <p><NIcon><CheckmarkDoneOutline /></NIcon>我们希望减少遗漏，让学习安排更从容。</p> -->
         </section>
       </div>
     </main>
@@ -240,13 +232,14 @@ const privacyVisible = ref(false)
 }
 
 .project-card {
-  min-height: 150px;
+  width: calc(100% - 84px);
+  min-height: 104px;
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: 18px;
-  margin: 25px 42px 0;
-  padding: 25px 32px 18px;
+  margin: 25px auto 0;
+  padding: 22px 26px;
 }
 
 .version {
@@ -263,26 +256,12 @@ const privacyVisible = ref(false)
 
 .project-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 18px;
 }
 
 .project-actions :deep(.n-button) {
-  min-width: 200px;
-}
-
-.project-card p {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 0;
-  color: #7485a0;
-  font-size: 15px;
-}
-
-.project-card p :deep(.n-icon) {
-  display: none;
+  min-width: 260px;
 }
 
 @media (max-width: 900px) {
@@ -306,16 +285,7 @@ const privacyVisible = ref(false)
   }
 
   .project-card {
-    grid-template-columns: 1fr;
-    margin: 25px 24px 0;
-  }
-
-  .project-actions {
-    flex-wrap: wrap;
-  }
-
-  .project-card p {
-    grid-column: 1;
+    width: calc(100% - 48px);
   }
 }
 
@@ -357,8 +327,10 @@ const privacyVisible = ref(false)
   }
 
   .project-card {
-    margin-left: 0;
-    margin-right: 0;
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px;
   }
 
   .project-actions {

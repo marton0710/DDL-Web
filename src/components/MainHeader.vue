@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { NDrawer, NDrawerContent, NIcon } from 'naive-ui'
-import { MenuOutline, PersonOutline } from '@vicons/ionicons5'
+import { NDrawer, NDrawerContent, NIcon, NSwitch } from 'naive-ui'
+import { MenuOutline, MoonOutline, PersonOutline } from '@vicons/ionicons5'
 import AccountActions from './AccountActions.vue'
 import { useSession } from '../state/session'
 
@@ -25,10 +25,14 @@ const mobileOpen = ref(false)
       </nav>
 
       <div class="header-actions">
-        <RouterLink class="profile-entry" to="/profile" :aria-label="displayName ? `${displayName}的个人中心` : '进入个人中心'">
+        <div class="theme-switch" title="深色模式暂不可用">
+          <NIcon><MoonOutline /></NIcon>
+          <NSwitch :value="false" size="small" disabled aria-label="深色模式暂不可用" />
+        </div>
+        <div class="profile-entry" :aria-label="displayName ? `当前用户：${displayName}` : '当前用户'">
           <span class="profile-name">{{ displayName || '个人中心' }}</span>
           <span class="avatar">{{ avatarText }}</span>
-        </RouterLink>
+        </div>
         <button class="mobile-menu-button" type="button" aria-label="打开导航" @click="mobileOpen = true">
           <NIcon><MenuOutline /></NIcon>
         </button>
@@ -115,9 +119,10 @@ const mobileOpen = ref(false)
 .desktop-nav a:hover { color: #1769e8; background: #f1f5fc; }
 .desktop-nav a.active { color: #1769e8; background: #eaf1ff; }
 
-.header-actions { display: flex; align-items: center; }
-.profile-entry { display: flex; align-items: center; gap: 10px; border-radius: 10px; padding: 5px 6px 5px 10px; transition: background 0.18s ease; }
-.profile-entry:hover { background: #f2f5f9; }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.theme-switch { display: flex; align-items: center; gap: 7px; color: #7d899a; font-size: 17px; }
+.theme-switch :deep(.n-switch.n-switch--disabled) { opacity: 0.62; }
+.profile-entry { display: flex; align-items: center; gap: 10px; border-radius: 10px; padding: 5px 6px 5px 10px; }
 .profile-name { max-width: 110px; overflow: hidden; color: #5d6b80; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .avatar {
   width: 34px;
@@ -152,6 +157,7 @@ const mobileOpen = ref(false)
   .brand img { width: 137px; height: 36px; }
   .desktop-nav,
   .profile-entry { display: none; }
+  .theme-switch { gap: 5px; }
   .mobile-menu-button { display: inline-flex; }
 }
 </style>

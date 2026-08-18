@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { NButton, NCheckbox, NIcon, NInput, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
@@ -12,39 +12,29 @@ import {
 } from '@vicons/ionicons5'
 import { authApi } from '../api/auth'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
-import { getApiErrorMessage, isAuthenticationError } from '../api/client'
+import { getApiErrorMessage } from '../api/client'
 import { useSession } from '../state/session'
 
 const router = useRouter()
-const route = useRoute()
 const message = useMessage()
 const { clearSession, setDisplayName } = useSession()
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const submitting = ref(false)
-const checkingSession = ref(true)
+const refreshingSession = ref(true)
 const privacyVisible = ref(false)
 const privacyAccepted = ref(false)
 
-function postLoginTarget(): string {
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
-  if (!redirect.startsWith('/') || redirect.startsWith('//') || redirect === '/' || redirect === '/login') {
-    return '/home'
-  }
-  return redirect
-}
-
-async function redirectAuthenticatedUser() {
+async function refreshSession() {
   try {
-    const currentUser = await authApi.getCurrentUser()
-    setDisplayName(currentUser.name)
-    await router.replace(postLoginTarget())
-  } catch (error) {
-    if (isAuthenticationError(error)) clearSession()
-    // 本地凭证不存在或失效时停留在登录页。
+    await authApi.refresh()
+    await router.replace('/home')
+  } catch {
+    clearSession()
+    // refresh token 不存在、失效或刷新失败时停留在登录页。
   } finally {
-    checkingSession.value = false
+    refreshingSession.value = false
   }
 }
 
@@ -66,7 +56,7 @@ async function submitLogin() {
     })
     setDisplayName(result.name)
     password.value = ''
-    await router.replace(postLoginTarget())
+    await router.replace('/home')
   } catch (error) {
     message.error(getApiErrorMessage(error, '登录失败，请稍后重试'))
   } finally {
@@ -74,7 +64,7 @@ async function submitLogin() {
   }
 }
 
-onMounted(redirectAuthenticatedUser)
+onMounted(refreshSession)
 </script>
 
 <template>
@@ -118,15 +108,15 @@ onMounted(redirectAuthenticatedUser)
           </NInput>
           <div class="privacy-consent">
             <NCheckbox v-model:checked="privacyAccepted">我已知晓</NCheckbox>
-            <button type="button" @click="privacyVisible = true">《隐私说明》</button>
+            <button type="button" @click="privacyVisible = true">《隐私政策》</button>
           </div>
           <NButton
             attr-type="submit"
             type="primary"
             size="large"
             block
-            :loading="submitting || checkingSession"
-            :disabled="submitting || checkingSession || !privacyAccepted"
+            :loading="submitting || refreshingSession"
+            :disabled="submitting || refreshingSession || !privacyAccepted"
           >
             登录
           </NButton>

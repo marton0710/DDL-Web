@@ -2,6 +2,7 @@
 import { NIcon, NModal } from 'naive-ui'
 import { CloseOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
 import {
+  PRIVACY_NOTICE_HIGHLIGHTS,
   PRIVACY_NOTICE_SECTIONS,
   PRIVACY_NOTICE_UPDATED_AT,
 } from '../content/privacyNotice'
@@ -39,10 +40,25 @@ const emit = defineEmits<{
       </header>
 
       <div class="privacy-content">
-        <p class="privacy-intro">使用聚合截止线前，请花一点时间了解我们会处理哪些信息、为什么需要这些信息，以及您可以怎样管理它们。请特别留意密码保存相关内容，再决定是否继续使用。</p>
+        <p class="privacy-intro">使用聚合截止线前，请花一点时间了解我们会处理哪些信息、为什么需要这些信息，以及您可以怎样管理它们。请特别留意<strong>密码保存相关内容</strong>，再决定是否继续使用。</p>
+        <section class="privacy-highlights" aria-label="隐私说明重点">
+          <ul>
+            <li v-for="highlight in PRIVACY_NOTICE_HIGHLIGHTS" :key="highlight.title">
+              <strong>{{ highlight.title }}</strong>
+              <span>{{ highlight.detail }}</span>
+            </li>
+          </ul>
+        </section>
         <section v-for="section in PRIVACY_NOTICE_SECTIONS" :key="section.title">
           <h3>{{ section.title }}</h3>
-          <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
+          <p
+            v-for="paragraph in section.paragraphs"
+            :key="paragraph.summary"
+            :class="{ 'is-warning': paragraph.tone === 'warning' }"
+          >
+            <strong>{{ paragraph.summary }}</strong>
+            <span>{{ paragraph.detail }}</span>
+          </p>
         </section>
       </div>
 
@@ -136,8 +152,51 @@ const emit = defineEmits<{
   line-height: 1.7;
 }
 
+.privacy-highlights {
+  margin: 0 0 24px;
+  padding: 0;
+}
+
+.privacy-highlights ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.privacy-highlights li {
+  min-width: 0;
+  border: 1px solid #e4eaf3;
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: #fafcff;
+}
+
+.privacy-highlights li strong,
+.privacy-highlights li span {
+  display: block;
+}
+
+.privacy-highlights li strong {
+  margin-bottom: 3px;
+  color: #263954;
+  font-size: 12px;
+}
+
+.privacy-highlights li span {
+  color: #718096;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .privacy-content section {
   padding: 0 2px 18px;
+}
+
+.privacy-content .privacy-highlights {
+  padding-bottom: 0;
 }
 
 .privacy-content h3 {
@@ -152,6 +211,28 @@ const emit = defineEmits<{
   font-size: 12px;
   line-height: 1.8;
   overflow-wrap: anywhere;
+}
+
+.privacy-content section p > strong {
+  color: #304766;
+  font-weight: 700;
+}
+
+.privacy-intro strong {
+  color: #28476f;
+}
+
+.privacy-content section p.is-warning {
+  margin: 10px 0 12px;
+  border-left: 3px solid #d99a35;
+  border-radius: 0 8px 8px 0;
+  padding: 9px 11px;
+  color: #725a35;
+  background: #fff9ef;
+}
+
+.privacy-content section p.is-warning > strong {
+  color: #8a5a13;
 }
 
 .privacy-modal > footer {
@@ -195,6 +276,10 @@ const emit = defineEmits<{
 
   .privacy-content {
     padding: 18px 17px 6px;
+  }
+
+  .privacy-highlights ul {
+    grid-template-columns: 1fr;
   }
 
   .privacy-modal > footer {

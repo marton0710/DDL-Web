@@ -1,13 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NCheckbox, NForm, NFormItem, NIcon, NInput, NModal, useMessage } from 'naive-ui'
 import {
+  NButton,
+  NCard,
+  NForm,
+  NFormItem,
+  NIcon,
+  NInput,
+  NInputNumber,
+  NModal,
+  NTimePicker,
+  useMessage,
+} from 'naive-ui'
+import {
+  ChevronForwardOutline,
   InformationCircleOutline,
   KeyOutline,
   LayersOutline,
-  MailOutline,
-  WarningOutline,
 } from '@vicons/ionicons5'
 import AccountActions from '../components/AccountActions.vue'
 import MainHeader from '../components/MainHeader.vue'
@@ -18,7 +28,6 @@ import type {
   CurrentUser,
   PlatformAuthMethod,
   PlatformCredentials,
-  UserInfoPatch,
 } from '../api/types'
 import { PLATFORM_META, type PlatformMeta } from '../domain/platform'
 import { useSession } from '../state/session'
@@ -26,27 +35,58 @@ import { useSession } from '../state/session'
 const router = useRouter()
 const message = useMessage()
 const { avatarText, clearSession, displayName, setDisplayName } = useSession()
-const profileLoading = ref(false)
-const savingProfile = ref(false)
-const editDialogOpen = ref(false)
 const bindDialogOpen = ref(false)
 const bindLoading = ref(false)
 const bindAuthMethod = ref<PlatformAuthMethod | null>(null)
+const qqReminderDialogOpen = ref(false)
+const meetScheduleDialogOpen = ref(false)
+const qqReminderSaving = ref(false)
+const meetScheduleSaving = ref(false)
 
 const userInfo = reactive<CurrentUser>({
   name: '',
-  email: null,
   qqchan_id: null,
   meetschedule_key: null,
 })
 
-const editForm = reactive({
-  email: '',
+function defaultReminderTime(): string {
+  return '07:00'
+}
+
+function formatReminderTime(value: string): string {
+  const time = new Date(value)
+  if (Number.isNaN(time.getTime())) return defaultReminderTime()
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(time)
+}
+
+function reminderTimeToIso(value: string): string {
+  const [hour, minute] = value.split(':').map(Number)
+  const time = new Date()
+  time.setHours(hour, minute, 0, 0)
+  return time.toISOString()
+}
+
+function updateReminderTime(value: string | null) {
+  if (value) qqReminderForm.pushTime = value
+}
+
+const qqReminderForm = reactive({
   qqchanId: '',
-  meetscheduleKey: '',
-  clearQqchanId: false,
-  clearMeetscheduleKey: false,
+  pushTime: defaultReminderTime(),
+  coverageHours: 24 as number | null,
 })
+const meetScheduleKey = ref('')
+
+interface QqReminderSettings {
+  push_time: string
+  coverage_hours: number
+}
+
+const qqReminderSettings = ref<QqReminderSettings | null>(null)
 
 type PlatformStatus = 'loading' | 'bound' | 'invalid' | 'unbound' | 'error'
 interface PlatformState extends PlatformMeta {
@@ -61,12 +101,25 @@ const selectedPlatform = ref<PlatformState | null>(null)
 const platformCredentials = reactive({ username: '', password: '' })
 
 const profileName = computed(() => userInfo.name || displayName.value || '同学')
-const profileEmail = computed(() => userInfo.email || '暂未填写邮箱')
 const connectedPlatformCount = computed(() => platforms.filter((item) => item.status === 'bound').length)
-
-function nullableValue(value: string): string | null {
-  return value.trim() || null
-}
+const connectedServiceCount = computed(() => (
+  Number(Boolean(userInfo.qqchan_id))
+  + Number(Boolean(userInfo.meetschedule_key))
+))
+const qqReminderTimeSummary = computed(() => {
+  const settings = qqReminderSettings.value
+  if (!userInfo.qqchan_id && !settings) return ''
+  const coverageHours = settings?.coverage_hours ?? 24
+  const time = settings ? formatReminderTime(settings.push_time) : defaultReminderTime()
+  return `${time} 推送 · 覆盖 ${coverageHours} 小时`
+})
+const canSaveQqReminder = computed(() => (
+  Boolean(userInfo.qqchan_id || qqReminderForm.qqchanId.trim())
+  && Number.isInteger(qqReminderForm.coverageHours)
+  && Number(qqReminderForm.coverageHours) >= 24
+  && Number(qqReminderForm.coverageHours) <= 48
+))
+const canSaveMeetSchedule = computed(() => Boolean(meetScheduleKey.value.trim()))
 
 async function handleUnauthorized(error: unknown): Promise<boolean> {
   if (!isAuthenticationError(error)) return false
@@ -75,19 +128,22 @@ async function handleUnauthorized(error: unknown): Promise<boolean> {
   return true
 }
 
+function applyCurrentUser(currentUser: CurrentUser) {
+  userInfo.name = currentUser.name
+  userInfo.qqchan_id = currentUser.qqchan_id
+  userInfo.meetschedule_key = currentUser.meetschedule_key
+  setDisplayName(currentUser.name)
+}
+
 async function loadUserInfo(): Promise<boolean> {
-  profileLoading.value = true
   try {
     const currentUser = await authApi.getCurrentUser()
-    Object.assign(userInfo, currentUser)
-    setDisplayName(currentUser.name)
+    applyCurrentUser(currentUser)
     return true
   } catch (error) {
     if (await handleUnauthorized(error)) return false
-    message.error(getApiErrorMessage(error, '个人资料加载失败'))
+    message.error(getApiErrorMessage(error, '账号信息加载失败'))
     return false
-  } finally {
-    profileLoading.value = false
   }
 }
 
@@ -102,42 +158,88 @@ async function loadPlatformStatus(platform: PlatformState) {
   }
 }
 
-function openProfileEditor() {
-  editForm.email = userInfo.email ?? ''
-  editForm.qqchanId = ''
-  editForm.meetscheduleKey = ''
-  editForm.clearQqchanId = false
-  editForm.clearMeetscheduleKey = false
-  editDialogOpen.value = true
+function openQqReminderSettings() {
+  const settings = qqReminderSettings.value
+  qqReminderForm.qqchanId = ''
+  qqReminderForm.pushTime = settings ? formatReminderTime(settings.push_time) : defaultReminderTime()
+  qqReminderForm.coverageHours = settings?.coverage_hours ?? 24
+  qqReminderDialogOpen.value = true
 }
 
-async function saveProfile() {
-  if (editForm.email && !/^\S+@\S+\.\S+$/.test(editForm.email)) {
-    message.warning('请输入有效的邮箱地址')
-    return
-  }
-
-  const input: UserInfoPatch = {
-    email: nullableValue(editForm.email),
-  }
-  if (editForm.clearQqchanId) input.qqchan_id = null
-  else if (editForm.qqchanId.trim()) input.qqchan_id = editForm.qqchanId.trim()
-  if (editForm.clearMeetscheduleKey) input.meetschedule_key = null
-  else if (editForm.meetscheduleKey.trim()) input.meetschedule_key = editForm.meetscheduleKey.trim()
-
-  savingProfile.value = true
+async function saveQqReminderSettings() {
+  if (!canSaveQqReminder.value) return
+  const qqchanId = qqReminderForm.qqchanId.trim()
+  qqReminderSaving.value = true
   try {
-    await authApi.updateUserInfo(input)
-    const currentUser = await authApi.getCurrentUser()
-    Object.assign(userInfo, currentUser)
-    setDisplayName(currentUser.name)
-    editDialogOpen.value = false
-    message.success('个人资料已更新')
+    if (qqchanId) {
+      await authApi.updateBindings({ qqchan_id: qqchanId })
+      applyCurrentUser(await authApi.getCurrentUser())
+    }
+    qqReminderSettings.value = {
+      push_time: reminderTimeToIso(qqReminderForm.pushTime),
+      coverage_hours: Number(qqReminderForm.coverageHours),
+    }
+    qqReminderForm.qqchanId = ''
+    qqReminderDialogOpen.value = false
   } catch (error) {
     if (await handleUnauthorized(error)) return
-    message.error(getApiErrorMessage(error, '个人资料更新失败'))
+    message.error(getApiErrorMessage(error, 'QQ机器人提醒保存失败'))
   } finally {
-    savingProfile.value = false
+    qqReminderSaving.value = false
+  }
+}
+
+function openMeetScheduleSettings() {
+  meetScheduleKey.value = ''
+  meetScheduleDialogOpen.value = true
+}
+
+async function saveMeetScheduleSettings() {
+  if (!canSaveMeetSchedule.value) return
+  meetScheduleSaving.value = true
+  try {
+    await authApi.updateBindings({ meetschedule_key: meetScheduleKey.value.trim() })
+    applyCurrentUser(await authApi.getCurrentUser())
+    meetScheduleKey.value = ''
+    meetScheduleDialogOpen.value = false
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, 'Meet 课程表保存失败'))
+  } finally {
+    meetScheduleSaving.value = false
+  }
+}
+
+async function unbindQqReminder() {
+  qqReminderSaving.value = true
+  try {
+    await authApi.updateBindings({ qqchan_id: null })
+    userInfo.qqchan_id = null
+    qqReminderSettings.value = null
+    qqReminderForm.qqchanId = ''
+    qqReminderDialogOpen.value = false
+    message.success('已取消 QQ机器人提醒绑定')
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '取消 QQ机器人提醒绑定失败'))
+  } finally {
+    qqReminderSaving.value = false
+  }
+}
+
+async function unbindMeetSchedule() {
+  meetScheduleSaving.value = true
+  try {
+    await authApi.updateBindings({ meetschedule_key: null })
+    userInfo.meetschedule_key = null
+    meetScheduleKey.value = ''
+    meetScheduleDialogOpen.value = false
+    message.success('已取消 Meet 课程表绑定')
+  } catch (error) {
+    if (await handleUnauthorized(error)) return
+    message.error(getApiErrorMessage(error, '取消 Meet 课程表绑定失败'))
+  } finally {
+    meetScheduleSaving.value = false
   }
 }
 
@@ -220,7 +322,7 @@ onMounted(async () => {
       <header class="page-heading">
         <span>账号与连接</span>
         <h1>我的</h1>
-        <p>管理个人资料、学习平台与提醒服务。</p>
+        <p>管理学习平台、提醒与课程表同步。</p>
       </header>
 
       <div class="profile-grid">
@@ -228,12 +330,10 @@ onMounted(async () => {
           <aside class="identity-card">
             <div class="profile-avatar">{{ avatarText }}</div>
             <h2>{{ profileName }}</h2>
-            <p><NIcon><MailOutline /></NIcon>{{ profileLoading ? '正在加载资料' : profileEmail }}</p>
             <div class="identity-stats">
               <div><strong>{{ connectedPlatformCount }}</strong><span>已连接平台</span></div>
-              <div><strong>{{ userInfo.qqchan_id ? 1 : 0 }}</strong><span>提醒服务</span></div>
+              <div><strong>{{ connectedServiceCount }}</strong><span>可选功能</span></div>
             </div>
-            <NButton block type="primary" ghost :loading="profileLoading" @click="openProfileEditor">编辑个人资料</NButton>
           </aside>
           <div class="desktop-account-actions">
             <AccountActions :username="userInfo.name" />
@@ -285,23 +385,22 @@ onMounted(async () => {
           </section>
 
           <section class="profile-card services-card">
-            <header><div><span>可选配置</span><h2>提醒与同步</h2><p>敏感字段已做脱敏处理，留空不会覆盖现有配置。</p></div></header>
+            <header><div><span>偏好设置</span><h2>提醒与同步</h2><p>分别管理 QQ机器人提醒和课程表同步。</p></div></header>
             <div class="service-grid">
-              <article>
-                <span class="service-icon mail"><NIcon><MailOutline /></NIcon></span>
-                <div><strong>通知邮箱</strong><span>{{ userInfo.email || '未配置' }}</span></div>
-                <em :class="{ active: userInfo.email }">{{ userInfo.email ? '已配置' : '未配置' }}</em>
-              </article>
-              <article>
+              <button type="button" class="service-item" @click="openQqReminderSettings">
                 <span class="service-icon key"><NIcon><KeyOutline /></NIcon></span>
-                <div><strong>QQChan 提醒</strong><span>{{ userInfo.qqchan_id || '未配置' }}</span></div>
-                <em :class="{ active: userInfo.qqchan_id }">{{ userInfo.qqchan_id ? '已配置' : '未配置' }}</em>
-              </article>
-              <article>
+                <div>
+                  <strong>QQ机器人提醒</strong>
+                  <span>{{ userInfo.qqchan_id || '未配置' }}</span>
+                  <small v-if="qqReminderTimeSummary">{{ qqReminderTimeSummary }}</small>
+                </div>
+                <NIcon class="service-chevron"><ChevronForwardOutline /></NIcon>
+              </button>
+              <button type="button" class="service-item" @click="openMeetScheduleSettings">
                 <span class="service-icon layers"><NIcon><LayersOutline /></NIcon></span>
                 <div><strong>Meet 课程表</strong><span>{{ userInfo.meetschedule_key || '未配置' }}</span></div>
-                <em :class="{ active: userInfo.meetschedule_key }">{{ userInfo.meetschedule_key ? '已配置' : '未配置' }}</em>
-              </article>
+                <NIcon class="service-chevron"><ChevronForwardOutline /></NIcon>
+              </button>
             </div>
           </section>
 
@@ -313,43 +412,75 @@ onMounted(async () => {
       </div>
     </main>
 
-    <NModal v-model:show="editDialogOpen">
-      <NCard class="profile-dialog" title="编辑个人资料" :bordered="false" role="dialog" aria-modal="true">
-        <p class="dialog-description">留空保留现有配置，填写新值或明确勾选清除时更新配置。</p>
-        <NForm class="profile-form" label-placement="top">
-          <NFormItem label="邮箱">
-            <NInput v-model:value="editForm.email" placeholder="用于接收通知的邮箱" />
+    <NModal v-model:show="qqReminderDialogOpen" :mask-closable="false">
+      <NCard class="profile-dialog" title="QQ机器人提醒" :bordered="false" role="dialog" aria-modal="true">
+        <p class="dialog-description">绑定 QQ机器人提醒并设置每天的推送时刻，以及要覆盖的未来作业范围。</p>
+        <NForm label-placement="top">
+          <NFormItem label="QQ机器人提醒绑定">
+            <NInput
+              v-model:value="qqReminderForm.qqchanId"
+              :placeholder="userInfo.qqchan_id ? `${userInfo.qqchan_id}；输入新值可更换` : '请输入绑定标识'"
+            />
           </NFormItem>
-          <NFormItem label="QQChan ID">
-            <div class="sensitive-field">
-              <NInput
-                v-model:value="editForm.qqchanId"
-                :disabled="editForm.clearQqchanId"
-                :placeholder="userInfo.qqchan_id ? '输入新值以替换现有配置' : '不使用可留空'"
+          <div class="reminder-setting-grid">
+            <NFormItem label="推送时刻">
+              <NTimePicker
+                :formatted-value="qqReminderForm.pushTime"
+                class="setting-control readonly-time-picker"
+                format="HH:mm"
+                value-format="HH:mm"
+                input-readonly
+                :actions="['confirm']"
+                :clearable="false"
+                placeholder="选择推送时间"
+                @update:formatted-value="updateReminderTime"
               />
-              <div v-if="userInfo.qqchan_id" class="sensitive-meta" :class="{ clearing: editForm.clearQqchanId }">
-                <span>{{ editForm.clearQqchanId ? '保存后将清除当前配置' : '已配置，留空则保持不变' }}</span>
-                <NCheckbox v-model:checked="editForm.clearQqchanId">清除此项</NCheckbox>
-              </div>
-            </div>
-          </NFormItem>
+            </NFormItem>
+            <NFormItem label="作业覆盖范围">
+              <NInputNumber
+                v-model:value="qqReminderForm.coverageHours"
+                class="setting-control"
+                :min="24"
+                :max="48"
+                :precision="0"
+                :step="1"
+                placeholder="24–48"
+              >
+                <template #suffix>小时</template>
+              </NInputNumber>
+            </NFormItem>
+          </div>
+        </NForm>
+        <div class="dialog-actions" :class="{ 'has-unbind': userInfo.qqchan_id }">
+          <NButton v-if="userInfo.qqchan_id" type="error" secondary :loading="qqReminderSaving" @click="unbindQqReminder">取消绑定</NButton>
+          <div class="dialog-primary-actions">
+            <NButton :disabled="qqReminderSaving" @click="qqReminderDialogOpen = false">取消</NButton>
+            <NButton type="primary" :loading="qqReminderSaving" :disabled="!canSaveQqReminder" @click="saveQqReminderSettings">保存</NButton>
+          </div>
+        </div>
+      </NCard>
+    </NModal>
+
+    <NModal v-model:show="meetScheduleDialogOpen" :mask-closable="false">
+      <NCard class="profile-dialog" title="Meet 课程表" :bordered="false" role="dialog" aria-modal="true">
+        <p class="dialog-description">单独设置 Meet 课程表同步密钥。</p>
+        <NForm label-placement="top">
           <NFormItem label="MeetSchedule Key">
-            <div class="sensitive-field">
-              <NInput
-                v-model:value="editForm.meetscheduleKey"
-                type="password"
-                show-password-on="click"
-                :disabled="editForm.clearMeetscheduleKey"
-                :placeholder="userInfo.meetschedule_key ? '输入新值以替换现有配置' : '不使用可留空'"
-              />
-              <div v-if="userInfo.meetschedule_key" class="sensitive-meta" :class="{ clearing: editForm.clearMeetscheduleKey }">
-                <span>{{ editForm.clearMeetscheduleKey ? '保存后将清除当前配置' : '已配置，留空则保持不变' }}</span>
-                <NCheckbox v-model:checked="editForm.clearMeetscheduleKey">清除此项</NCheckbox>
-              </div>
-            </div>
+            <NInput
+              v-model:value="meetScheduleKey"
+              type="password"
+              show-password-on="click"
+              :placeholder="userInfo.meetschedule_key ? `${userInfo.meetschedule_key}；输入新值可更换` : '请输入同步密钥'"
+            />
           </NFormItem>
         </NForm>
-        <div class="dialog-actions"><NButton @click="editDialogOpen = false">取消</NButton><NButton type="primary" :loading="savingProfile" @click="saveProfile">保存</NButton></div>
+        <div class="dialog-actions" :class="{ 'has-unbind': userInfo.meetschedule_key }">
+          <NButton v-if="userInfo.meetschedule_key" type="error" secondary :loading="meetScheduleSaving" @click="unbindMeetSchedule">取消绑定</NButton>
+          <div class="dialog-primary-actions">
+            <NButton :disabled="meetScheduleSaving" @click="meetScheduleDialogOpen = false">取消</NButton>
+            <NButton type="primary" :loading="meetScheduleSaving" :disabled="!canSaveMeetSchedule" @click="saveMeetScheduleSettings">保存</NButton>
+          </div>
+        </div>
       </NCard>
     </NModal>
 
@@ -363,7 +494,7 @@ onMounted(async () => {
       >
         <p class="dialog-description">
           {{ bindAuthMethod === 'password'
-            ? '该平台需要独立账号密码。后端会使用凭据登录并加密保存，以便授权失效时重新认证。'
+            ? '该平台需要独立账号密码。凭据将加密保存，以便授权失效时重新认证。'
             : '该平台使用当前重邮统一认证身份完成绑定，无需再次输入账号密码。' }}
         </p>
         <NForm v-if="bindAuthMethod === 'password'" label-placement="top">
@@ -390,9 +521,8 @@ onMounted(async () => {
 .privacy-strip { border: 1px solid #e1e7f0; border-radius: 16px; background: rgba(255, 255, 255, 0.97); box-shadow: var(--shadow); }
 .identity-card { display: flex; flex-direction: column; align-items: center; padding: 28px 22px 20px; text-align: center; }
 .profile-avatar { width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; border-radius: 22px; color: white; background: linear-gradient(145deg, #2d7df0, #145cca); box-shadow: 0 12px 24px rgba(23, 105, 232, 0.22); font-size: 28px; font-weight: 750; }
-.identity-card h2 { margin: 16px 0 5px; color: #1b2d49; font-size: 20px; }
-.identity-card > p { max-width: 100%; display: flex; align-items: center; gap: 6px; margin: 0; overflow: hidden; color: #7d899c; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.identity-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; margin: 22px 0; border: solid #edf0f5; border-width: 1px 0; padding: 15px 0; }
+.identity-card h2 { margin: 16px 0 0; color: #1b2d49; font-size: 20px; }
+.identity-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; margin: 22px 0 0; border: solid #edf0f5; border-width: 1px 0; padding: 15px 0; }
 .identity-stats div { display: grid; gap: 4px; }
 .identity-stats div + div { border-left: 1px solid #edf0f5; }
 .identity-stats strong { color: #20324f; font-size: 20px; }
@@ -424,17 +554,18 @@ onMounted(async () => {
 .platform-actions { display: flex; gap: 7px; }
 
 .services-card > header { align-items: center; }
-.service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-top: 18px; }
-.service-grid article { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; border: 1px solid #e7ebf2; border-radius: 13px; padding: 13px; }
+.service-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-top: 18px; }
+.service-item { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid #e7ebf2; border-radius: 13px; padding: 13px; color: inherit; background: #fff; font: inherit; text-align: left; cursor: pointer; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+.service-item:hover,
+.service-item:focus-visible { border-color: #b9ccef; outline: none; box-shadow: 0 8px 22px rgba(43, 82, 139, 0.09); transform: translateY(-1px); }
 .service-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 17px; }
-.service-icon.mail { color: #1769e8; background: #eaf1ff; }
 .service-icon.key { color: #b55b13; background: #fff1e4; }
 .service-icon.layers { color: #078777; background: #e8f7f4; }
-.service-grid article > div { min-width: 0; display: grid; gap: 4px; }
-.service-grid article > div strong { color: #34445e; font-size: 11px; }
-.service-grid article > div span { overflow: hidden; color: #929cab; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.service-grid em { grid-column: 2; justify-self: start; border-radius: 99px; padding: 4px 7px; color: #7d899c; background: #f0f3f7; font-size: 8px; font-style: normal; }
-.service-grid em.active { color: #078777; background: #e9f7f4; }
+.service-item > div { min-width: 0; display: grid; gap: 4px; }
+.service-item > div strong { color: #34445e; font-size: 11px; }
+.service-item > div span { overflow: hidden; color: #929cab; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.service-item > div small { color: #66768c; font-size: 9px; line-height: 1.4; }
+.service-chevron { grid-column: 3; grid-row: 1; color: #a1abba; font-size: 16px; }
 
 .privacy-strip { display: flex; align-items: flex-start; gap: 13px; padding: 17px 19px; color: #68778d; box-shadow: none; }
 .privacy-strip :deep(.n-icon) { flex: 0 0 auto; color: #1769e8; font-size: 20px; }
@@ -444,24 +575,24 @@ onMounted(async () => {
 
 .profile-dialog { width: min(520px, calc(100vw - 28px)); border-radius: 16px; }
 .dialog-description { margin: -3px 0 18px; border-radius: 10px; padding: 11px 12px; color: #6b7a90; background: #f4f7fb; font-size: 11px; line-height: 1.65; }
-.profile-form :deep(.n-form-item-blank) { min-width: 0; }
-.sensitive-field { width: 100%; min-width: 0; display: grid; gap: 8px; }
-.sensitive-meta { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 8px; padding: 4px 8px 4px 10px; color: #7b889b; background: #f7f9fc; font-size: 10px; }
-.sensitive-meta.clearing { color: #bd3042; background: #fff2f4; }
-.sensitive-meta :deep(.n-checkbox) { flex: 0 0 auto; }
-.sensitive-meta :deep(.n-checkbox__label) { color: #59697f; font-size: 10px; }
-.sensitive-meta.clearing :deep(.n-checkbox__label) { color: #bd3042; }
+.reminder-setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.reminder-setting-grid :deep(.n-form-item) { min-width: 0; }
+.setting-control { width: 100%; }
+.readonly-time-picker :deep(.n-input),
+.readonly-time-picker :deep(.n-input__input-el),
+.readonly-time-picker :deep(.n-input-wrapper) { cursor: pointer; }
+.readonly-time-picker :deep(.n-input__input-el) { caret-color: transparent; font-variant-numeric: tabular-nums; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
+.dialog-actions.has-unbind { justify-content: space-between; }
+.dialog-primary-actions { display: flex; justify-content: flex-end; gap: 9px; }
 
 @media (max-width: 900px) {
   .profile-grid { grid-template-columns: 1fr; }
   .profile-sidebar { position: static; }
-  .identity-card { position: static; align-items: flex-start; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px 16px; text-align: left; }
-  .profile-avatar { grid-row: 1 / span 2; width: 60px; height: 60px; border-radius: 17px; font-size: 22px; }
-  .identity-card h2 { align-self: end; margin: 0; }
-  .identity-card > p { align-self: start; }
+  .identity-card { position: static; align-items: center; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 5px 16px; text-align: left; }
+  .profile-avatar { width: 60px; height: 60px; border-radius: 17px; font-size: 22px; }
+  .identity-card h2 { margin: 0; }
   .identity-stats { grid-column: 1 / -1; }
-  .identity-card > :deep(.n-button) { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
 }
 
 @media (max-width: 720px) {
@@ -474,9 +605,7 @@ onMounted(async () => {
   .profile-grid,
   .profile-content { gap: 12px; }
   .identity-card { display: flex; align-items: center; text-align: center; }
-  .identity-card h2 { align-self: auto; margin: 16px 0 5px; }
-  .identity-card > p { align-self: auto; }
-  .identity-card > :deep(.n-button) { width: 100%; }
+  .identity-card h2 { margin: 16px 0 0; }
   .profile-card { padding: 17px 14px; }
   .profile-card > header { align-items: flex-start; }
   .platform-list article { gap: 11px; padding: 13px 0; }
@@ -489,8 +618,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 520px) {
-  .sensitive-meta { align-items: flex-start; flex-direction: column; gap: 5px; padding: 8px 10px; }
-  .dialog-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .reminder-setting-grid { grid-template-columns: 1fr; gap: 0; }
+  .dialog-actions { display: block; }
+  .dialog-actions.has-unbind { display: flex; align-items: stretch; flex-direction: column-reverse; gap: 10px; }
+  .dialog-primary-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .dialog-actions :deep(.n-button) { width: 100%; }
 }
 </style>

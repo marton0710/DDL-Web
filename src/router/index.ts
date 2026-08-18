@@ -4,7 +4,7 @@ const router = createRouter({
   history: createWebHistory(),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
-    { path: '/', redirect: '/home' },
+    { path: '/', redirect: '/login' },
     { path: '/home', name: 'home', component: () => import('../views/HomeView.vue') },
     { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
     { path: '/about', name: 'about', component: () => import('../views/AboutView.vue') },

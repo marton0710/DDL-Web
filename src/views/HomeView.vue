@@ -147,7 +147,11 @@ const priorityHomework = computed(() =>
 
 const timelineHomeworks = computed(() =>
   homeworks.value
-    .filter((item) => !item.done && isInCurrentWeek(item))
+    .filter((item) => (
+      !item.done
+      && isInCurrentWeek(item)
+      && getHomeworkState(item) !== 'overdue'
+    ))
     .sort((left, right) => {
       const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
       const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
@@ -180,7 +184,7 @@ function applyHomeworkSnapshot(snapshot: HomeworkResponse) {
 async function handleAuthenticationError(error: unknown): Promise<boolean> {
   if (!isAuthenticationError(error)) return false
   clearSession()
-  await router.replace({ name: 'login', query: { redirect: '/home' } })
+  await router.replace('/login')
   return true
 }
 
@@ -867,7 +871,8 @@ onMounted(loadHomeworks)
   .metric-grid strong { font-size: 22px; }
   .workspace-grid,
   .side-column { gap: 12px; }
-  .side-column { grid-template-columns: 1fr; }
+  .side-column { display: contents; }
+  .upcoming-card { order: -1; }
   .upcoming-list { grid-template-columns: 1fr; }
   .upcoming-list article:nth-child(2) { border-top: 1px solid #eef1f5; }
   .panel-heading { align-items: stretch; flex-direction: column; padding: 16px; }
