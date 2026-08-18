@@ -37,7 +37,7 @@ type TaskFilter = 'pending' | 'soon' | 'overdue' | 'done' | 'all'
 const router = useRouter()
 const message = useMessage()
 const { clearSession } = useSession()
-const taskFilter = ref<TaskFilter>('all')
+const taskFilter = ref<TaskFilter>('pending')
 const platformFilter = ref<'all' | PlatformName>('all')
 const courseFilter = ref('all')
 const keyword = ref('')
@@ -77,8 +77,8 @@ function homeworkSortGroup(homework: Homework, now: number): number {
   if (homework.done) return 3
 
   const deadline = parseDeadline(homework.deadline)
-  if (!deadline) return 1
-  return deadline.getTime() < now ? 2 : 0
+  if (!deadline) return 2
+  return deadline.getTime() < now ? 1 : 0
 }
 
 function compareHomeworks(left: Homework, right: Homework, now: number): number {

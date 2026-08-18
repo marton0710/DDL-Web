@@ -11,9 +11,7 @@ function platformUrl(platform: PlatformName, action: string): string {
 
 export const platformApi = {
   getAuthMethod(platform: PlatformName) {
-    return apiRequest<PlatformAuthMethod>(platformUrl(platform, 'auth_method'), {
-      retryUnauthorized: false,
-    })
+    return apiRequest<PlatformAuthMethod>(platformUrl(platform, 'auth_method'))
   },
 
   bind(platform: PlatformName, credentials: PlatformCredentials) {

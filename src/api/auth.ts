@@ -18,9 +18,7 @@ export const authApi = {
   },
 
   getCurrentUser() {
-    return apiRequest<CurrentUser>('/api/auth/me', {
-      retryUnauthorized: false,
-    })
+    return apiRequest<CurrentUser>('/api/auth/me')
   },
 
   updateBindings(input: UserBindingPatch) {
