@@ -1,23 +1,27 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCheckbox, NIcon, NInput, useMessage } from 'naive-ui'
+import { NButton, NCheckbox, NIcon, NInput, NSwitch, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
   LayersOutline,
   LockClosedOutline,
+  MoonOutline,
   PersonOutline,
   ShieldCheckmarkOutline,
+  SunnyOutline,
 } from '@vicons/ionicons5'
 import { authApi } from '../api/auth'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
 import { getApiErrorMessage } from '../api/client'
 import { useSession } from '../state/session'
+import { useTheme } from '../state/theme'
 
 const router = useRouter()
 const message = useMessage()
 const { clearSession, setDisplayName } = useSession()
+const { isDark, toggleTheme } = useTheme()
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -71,8 +75,20 @@ onMounted(refreshSession)
   <div class="login-page">
     <header class="login-header">
       <RouterLink to="/login" class="login-brand">
-        <img src="/assets/brand/logo-lockup.png" alt="聚合截止线" />
+        <img
+          :src="isDark ? '/assets/brand/logo-lockup-header.png' : '/assets/brand/logo-lockup.png'"
+          alt="聚合截止线"
+        />
       </RouterLink>
+      <div class="login-theme-switch" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
+        <NIcon><SunnyOutline v-if="isDark" /><MoonOutline v-else /></NIcon>
+        <NSwitch
+          :value="isDark"
+          size="small"
+          :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
+          @update:value="toggleTheme"
+        />
+      </div>
     </header>
 
     <main class="login-main">
@@ -141,18 +157,18 @@ onMounted(refreshSession)
 .login-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 16% 54%, rgba(217, 230, 249, 0.52), transparent 26%),
-    #f5f5f7;
+    radial-gradient(circle at 16% 54%, var(--bg-glow), transparent 26%),
+    var(--bg);
 }
 
 .login-header {
   height: 68px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  border-bottom: 1px solid rgba(31, 35, 43, 0.08);
+  justify-content: space-between;
+  border-bottom: 1px solid var(--header-border);
   padding: 0 28px;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--header-bg);
   backdrop-filter: blur(18px);
 }
 
@@ -160,6 +176,14 @@ onMounted(refreshSession)
   display: block;
   height: 43px;
   width: auto;
+}
+
+.login-theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-tertiary);
+  font-size: 17px;
 }
 
 .login-main {
@@ -185,24 +209,25 @@ onMounted(refreshSession)
   width: 470px;
   height: 330px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(206, 225, 255, 0.62), rgba(229, 239, 255, 0.22) 60%, transparent 72%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 24%, transparent), transparent 72%);
 }
 
 .login-art img {
   position: relative;
   z-index: 1;
   width: min(100%, 540px);
-  filter: drop-shadow(0 22px 30px rgba(58, 104, 164, 0.1));
+  opacity: var(--illustration-opacity);
+  filter: var(--illustration-filter) drop-shadow(0 22px 30px rgba(0, 0, 0, 0.18));
 }
 
 .login-card {
   width: 100%;
   justify-self: center;
   padding: 42px 38px 34px;
-  border: 1px solid rgba(31, 35, 43, 0.09);
+  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.065);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-raised);
 }
 
 .login-card-heading {
@@ -211,14 +236,14 @@ onMounted(refreshSession)
 
 .login-card h1 {
   margin: 0 0 9px;
-  color: #1d1d1f;
+  color: var(--text-strong);
   font-size: 31px;
   letter-spacing: -0.7px;
 }
 
 .login-card-heading p {
   margin: 0;
-  color: #6e6e73;
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -257,7 +282,7 @@ onMounted(refreshSession)
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  background: #1769e8;
+  background: var(--primary);
 }
 
 .password-toggle {
@@ -267,7 +292,7 @@ onMounted(refreshSession)
   justify-content: center;
   border: 0;
   padding: 3px;
-  color: #71819c;
+  color: var(--text-tertiary);
   background: transparent;
   cursor: pointer;
 }
@@ -276,20 +301,20 @@ onMounted(refreshSession)
   display: flex;
   align-items: center;
   gap: 2px;
-  color: #6e7d92;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .privacy-consent :deep(.n-checkbox__label) {
   padding-right: 2px;
-  color: #6e7d92;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .privacy-consent button {
   border: 0;
   padding: 2px;
-  color: #1769e8;
+  color: var(--primary-text);
   background: transparent;
   font-size: 12px;
   cursor: pointer;
@@ -306,17 +331,17 @@ onMounted(refreshSession)
   align-items: center;
   gap: 13px;
   margin-top: 18px;
-  color: #77777c;
+  color: var(--text-tertiary);
   font-size: 11px;
 }
 
 .login-note.primary-note {
   min-height: 50px;
   padding: 0 14px;
-  border: 1px solid #d7e4f7;
+  border: 1px solid var(--primary-border);
   border-radius: 11px;
-  color: #596a82;
-  background: #f3f7fd;
+  color: var(--text-secondary);
+  background: var(--primary-soft);
 }
 
 .login-note.primary-note :deep(.n-icon) {

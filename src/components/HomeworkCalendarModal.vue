@@ -262,11 +262,11 @@ function selectDay(day: CalendarDay) {
   max-height: calc(100vh - 40px);
   max-height: calc(100dvh - 40px);
   overflow: hidden;
-  color: #0b2146;
-  border: 1px solid #dce6f3;
+  color: var(--text-strong);
+  border: 1px solid var(--line);
   border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 28px 80px rgba(13, 43, 82, 0.2);
+  background: var(--surface);
+  box-shadow: var(--shadow-modal);
 }
 
 .calendar-header {
@@ -275,8 +275,8 @@ function selectDay(day: CalendarDay) {
   justify-content: space-between;
   gap: 24px;
   padding: 22px 24px 18px;
-  border-bottom: 1px solid #e5ecf5;
-  background: linear-gradient(135deg, #f7fbff, #eef5ff);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--focus-card-bg);
 }
 
 .calendar-header h2 {
@@ -286,7 +286,7 @@ function selectDay(day: CalendarDay) {
 
 .calendar-header p {
   margin: 0;
-  color: #71829e;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -294,7 +294,7 @@ function selectDay(day: CalendarDay) {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #0f6af5;
+  color: var(--primary-text);
   font-size: 12px;
   font-weight: 700;
 }
@@ -311,18 +311,18 @@ function selectDay(day: CalendarDay) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d8e2ef;
+  border: 1px solid var(--control-border);
   border-radius: 9px;
-  color: #38506f;
-  background: #fff;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
   cursor: pointer;
   transition: 0.18s ease;
 }
 
 .calendar-actions button:hover,
 .calendar-actions button:focus-visible {
-  color: #0f6af5;
-  border-color: #89b7fb;
+  color: var(--primary-text);
+  border-color: var(--primary-text);
   outline: none;
 }
 
@@ -355,7 +355,7 @@ function selectDay(day: CalendarDay) {
 
 .calendar-weekdays span {
   padding: 4px 10px 10px;
-  color: #70819c;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
   text-align: center;
@@ -363,8 +363,8 @@ function selectDay(day: CalendarDay) {
 
 .calendar-grid {
   overflow: hidden;
-  border-top: 1px solid #e2eaf4;
-  border-left: 1px solid #e2eaf4;
+  border-top: 1px solid var(--line-soft);
+  border-left: 1px solid var(--line-soft);
   border-radius: 10px;
 }
 
@@ -372,9 +372,9 @@ function selectDay(day: CalendarDay) {
   min-width: 0;
   min-height: 94px;
   padding: 8px;
-  border-right: 1px solid #e2eaf4;
-  border-bottom: 1px solid #e2eaf4;
-  background: #fff;
+  border-right: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
   cursor: pointer;
   transition: background 0.16s ease, box-shadow 0.16s ease;
 }
@@ -383,19 +383,19 @@ function selectDay(day: CalendarDay) {
 .calendar-day:focus-visible {
   z-index: 1;
   outline: none;
-  background: #f6faff;
-  box-shadow: inset 0 0 0 1px #8bb8fb;
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px var(--primary-border);
 }
 
 .calendar-day.muted {
-  color: #a7b3c5;
-  background: #fafcff;
+  color: var(--text-disabled);
+  background: var(--surface-subtle);
 }
 
 .calendar-day.selected {
   z-index: 1;
-  background: #f2f7ff;
-  box-shadow: inset 0 0 0 2px #0f6af5;
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 2px var(--primary-text);
 }
 
 .day-number {
@@ -411,7 +411,7 @@ function selectDay(day: CalendarDay) {
 
 .calendar-day.today .day-number {
   color: #fff;
-  background: #0f6af5;
+  background: var(--primary);
 }
 
 .day-homeworks {
@@ -434,15 +434,15 @@ function selectDay(day: CalendarDay) {
 
 .day-homework > i { display: none; }
 
-.day-homework.cqupt { color: #126ef0; background: #edf5ff; }
-.day-homework.chaoxing { color: #dc1d36; background: #fff0f2; }
-.day-homework.yuketang { color: #07978e; background: #ebf9f8; }
-.day-homework.overdue { color: #d92237; background: #fff0f2; }
-.day-homework.done { color: #70819c; background: #f0f3f7; text-decoration: line-through; }
+.day-homework.cqupt { color: var(--primary-text); background: var(--primary-soft); }
+.day-homework.chaoxing { color: var(--danger-text); background: var(--danger-container); }
+.day-homework.yuketang { color: var(--success-text); background: var(--success-container); }
+.day-homework.overdue { color: var(--danger-text); background: var(--danger-container); }
+.day-homework.done { color: var(--neutral-text); background: var(--neutral-container); text-decoration: line-through; }
 
 .more-homeworks {
   padding-left: 4px;
-  color: #71829e;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -450,8 +450,8 @@ function selectDay(day: CalendarDay) {
   max-height: 190px;
   overflow: auto;
   padding: 16px 24px 20px;
-  border-top: 1px solid #e5ecf5;
-  background: #fbfdff;
+  border-top: 1px solid var(--line-soft);
+  background: var(--surface-subtle);
 }
 
 .selected-day-panel > header {
@@ -462,7 +462,7 @@ function selectDay(day: CalendarDay) {
 }
 
 .selected-day-panel header span {
-  color: #7b8ca6;
+  color: var(--text-tertiary);
   font-size: 11px;
 }
 
@@ -472,13 +472,13 @@ function selectDay(day: CalendarDay) {
 }
 
 .selected-day-panel header b {
-  color: #0f6af5;
+  color: var(--primary-text);
   font-size: 12px;
 }
 
 .selected-day-empty {
   margin: 14px 0 4px;
-  color: #8998af;
+  color: var(--text-tertiary);
   font-size: 13px;
   text-align: center;
 }
@@ -495,9 +495,9 @@ function selectDay(day: CalendarDay) {
   align-items: center;
   gap: 9px;
   padding: 7px 10px;
-  border: 1px solid #e5ecf5;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-elevated);
 }
 
 .platform-dot {
@@ -519,14 +519,14 @@ function selectDay(day: CalendarDay) {
 .selected-homework a,
 .selected-homework strong {
   overflow: hidden;
-  color: #142b50;
+  color: var(--text-strong);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .selected-homework a:hover {
-  color: #0f6af5;
+  color: var(--primary-text);
 }
 
 .selected-homework a .n-icon {
@@ -535,22 +535,22 @@ function selectDay(day: CalendarDay) {
 
 .selected-homework div span {
   overflow: hidden;
-  color: #7a8ba5;
+  color: var(--text-tertiary);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .selected-homework em {
-  color: #506683;
+  color: var(--text-secondary);
   font-size: 10px;
   font-style: normal;
   white-space: nowrap;
 }
 
-.selected-homework em.soon { color: #f05c08; }
-.selected-homework em.overdue { color: #dc1d36; }
-.selected-homework em.done { color: #07927d; }
+.selected-homework em.soon { color: var(--warning-text); }
+.selected-homework em.overdue { color: var(--danger-text); }
+.selected-homework em.done { color: var(--success-text); }
 
 @media (max-width: 680px) {
   .calendar-modal {

@@ -183,10 +183,10 @@ onBeforeUnmount(clearCountdown)
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #dce3ed;
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  color: #5d6b80;
-  background: rgba(255, 255, 255, 0.96);
+  color: var(--text-secondary);
+  background: var(--surface-card);
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
@@ -195,23 +195,23 @@ onBeforeUnmount(clearCountdown)
 
 .account-action:hover,
 .account-action:focus-visible {
-  border-color: #bcc8d8;
+  border-color: var(--control-border);
   outline: none;
-  background: #fff;
-  box-shadow: 0 7px 20px rgba(34, 53, 80, 0.08);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow);
 }
 
 .account-action.delete {
-  color: #c92a3f;
-  border-color: #f0c9cf;
-  background: #fffafb;
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+  background: var(--danger-container-soft);
 }
 
 .account-action.delete:hover,
 .account-action.delete:focus-visible {
-  color: #b81f35;
-  border-color: #e59ba6;
-  background: #fff3f5;
+  color: var(--danger-text);
+  border-color: var(--danger-text);
+  background: var(--danger-container);
 }
 
 .account-actions.mobile {
@@ -228,11 +228,11 @@ onBeforeUnmount(clearCountdown)
 }
 
 .account-actions.mobile .logout {
-  background: #f4f6f9;
+  background: var(--surface-soft);
 }
 
 .account-actions.mobile .delete {
-  background: #fff1f3;
+  background: var(--danger-container-soft);
 }
 
 .account-dialog {
@@ -242,7 +242,7 @@ onBeforeUnmount(clearCountdown)
 
 .account-dialog p {
   margin: 0 0 22px;
-  color: #67778f;
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -252,11 +252,11 @@ onBeforeUnmount(clearCountdown)
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 18px;
-  border: 1px solid #f1c9cf;
+  border: 1px solid var(--danger-border);
   border-radius: 12px;
   padding: 13px 14px;
-  color: #b92339;
-  background: #fff4f6;
+  color: var(--danger-text);
+  background: var(--danger-container-soft);
 }
 
 .deletion-warning :deep(.n-icon) {
@@ -275,7 +275,7 @@ onBeforeUnmount(clearCountdown)
 }
 
 .deletion-warning span {
-  color: #8f5260;
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -287,7 +287,7 @@ onBeforeUnmount(clearCountdown)
 
 .deletion-confirmation > p {
   margin: 0;
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.7;
 }
@@ -300,8 +300,8 @@ onBeforeUnmount(clearCountdown)
   overflow-wrap: anywhere;
   border-radius: 8px;
   padding: 7px 9px;
-  color: #263a57;
-  background: #f2f5f9;
+  color: var(--text-strong);
+  background: var(--surface-soft);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   user-select: all;

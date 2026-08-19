@@ -2,12 +2,14 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { NDrawer, NDrawerContent, NIcon, NSwitch } from 'naive-ui'
-import { MenuOutline, MoonOutline, PersonOutline } from '@vicons/ionicons5'
+import { MenuOutline, MoonOutline, PersonOutline, SunnyOutline } from '@vicons/ionicons5'
 import AccountActions from './AccountActions.vue'
 import { useSession } from '../state/session'
+import { useTheme } from '../state/theme'
 
 const route = useRoute()
 const { avatarText, displayName } = useSession()
+const { isDark, toggleTheme } = useTheme()
 const mobileOpen = ref(false)
 </script>
 
@@ -15,7 +17,10 @@ const mobileOpen = ref(false)
   <header class="site-header">
     <div class="header-inner">
       <RouterLink class="brand" to="/home" aria-label="聚合截止线首页">
-        <img src="/assets/brand/logo-lockup.png" alt="聚合截止线" />
+        <img
+          :src="isDark ? '/assets/brand/logo-lockup-header.png' : '/assets/brand/logo-lockup.png'"
+          alt="聚合截止线"
+        />
       </RouterLink>
 
       <nav class="desktop-nav" aria-label="主导航">
@@ -25,9 +30,14 @@ const mobileOpen = ref(false)
       </nav>
 
       <div class="header-actions">
-        <div class="theme-switch" title="深色模式暂不可用">
-          <NIcon><MoonOutline /></NIcon>
-          <NSwitch :value="false" size="small" disabled aria-label="深色模式暂不可用" />
+        <div class="theme-switch" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
+          <NIcon><SunnyOutline v-if="isDark" /><MoonOutline v-else /></NIcon>
+          <NSwitch
+            :value="isDark"
+            size="small"
+            :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
+            @update:value="toggleTheme"
+          />
         </div>
         <div class="profile-entry" :aria-label="displayName ? `当前用户：${displayName}` : '当前用户'">
           <span class="profile-name">{{ displayName || '个人中心' }}</span>
@@ -76,8 +86,8 @@ const mobileOpen = ref(false)
   top: 0;
   z-index: 30;
   height: 64px;
-  border-bottom: 1px solid rgba(218, 225, 235, 0.88);
-  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid var(--header-border);
+  background: var(--header-bg);
   backdrop-filter: blur(18px);
 }
 
@@ -110,20 +120,19 @@ const mobileOpen = ref(false)
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  color: #6b788d;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 600;
   transition: 0.18s ease;
 }
 
-.desktop-nav a:hover { color: #1769e8; background: #f1f5fc; }
-.desktop-nav a.active { color: #1769e8; background: #eaf1ff; }
+.desktop-nav a:hover { color: var(--primary-text); background: var(--primary-soft); }
+.desktop-nav a.active { color: var(--primary-soft-text); background: var(--primary-soft); }
 
 .header-actions { display: flex; align-items: center; gap: 12px; }
-.theme-switch { display: flex; align-items: center; gap: 7px; color: #7d899a; font-size: 17px; }
-.theme-switch :deep(.n-switch.n-switch--disabled) { opacity: 0.62; }
+.theme-switch { display: flex; align-items: center; gap: 7px; color: var(--text-tertiary); font-size: 17px; }
 .profile-entry { display: flex; align-items: center; gap: 10px; border-radius: 10px; padding: 5px 6px 5px 10px; }
-.profile-name { max-width: 110px; overflow: hidden; color: #5d6b80; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.profile-name { max-width: 110px; overflow: hidden; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .avatar {
   width: 34px;
   height: 34px;
@@ -138,17 +147,17 @@ const mobileOpen = ref(false)
   box-shadow: 0 5px 12px rgba(23, 105, 232, 0.2);
 }
 
-.mobile-menu-button { display: none; border: 0; padding: 7px; color: #3e4e68; background: transparent; font-size: 25px; cursor: pointer; }
+.mobile-menu-button { display: none; border: 0; padding: 7px; color: var(--text-secondary); background: transparent; font-size: 25px; cursor: pointer; }
 .drawer-profile { display: flex; align-items: center; gap: 12px; }
-.drawer-profile > span { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: white; background: #1769e8; }
+.drawer-profile > span { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: white; background: var(--primary); }
 .drawer-profile > div { display: grid; }
-.drawer-profile strong { color: #243550; font-size: 14px; }
-.drawer-profile small { margin-top: 2px; color: #8a96a8; font-size: 10px; }
+.drawer-profile strong { color: var(--text-strong); font-size: 14px; }
+.drawer-profile small { margin-top: 2px; color: var(--text-tertiary); font-size: 10px; }
 
 .mobile-nav { display: grid; gap: 7px; }
-.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 10px; padding: 0 13px; color: #536178; background: transparent; font-size: 13px; font-weight: 650; text-align: left; cursor: pointer; }
-.mobile-nav a.router-link-active { color: #1769e8; background: #eaf1ff; }
-.mobile-session-action { margin-top: 12px; border-top: 1px solid #edf1f6; padding-top: 12px; }
+.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 10px; padding: 0 13px; color: var(--text-secondary); background: transparent; font-size: 13px; font-weight: 650; text-align: left; cursor: pointer; }
+.mobile-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
+.mobile-session-action { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .mobile-delete-action { width: 100%; }
 
 @media (max-width: 720px) {

@@ -114,7 +114,7 @@ const privacyVisible = ref(false)
 
 .about-hero p {
   margin: 0;
-  color: #556b8b;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
@@ -123,6 +123,8 @@ const privacyVisible = ref(false)
   max-height: 245px;
   object-fit: contain;
   justify-self: center;
+  opacity: var(--illustration-opacity);
+  filter: var(--illustration-filter);
 }
 
 .feature-section,
@@ -162,7 +164,7 @@ const privacyVisible = ref(false)
 
 .feature-card p {
   margin: 0;
-  color: #657793;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -180,7 +182,7 @@ const privacyVisible = ref(false)
   gap: 16px;
   margin-top: 14px;
   padding: 18px 22px;
-  color: #506686;
+  color: var(--text-secondary);
   font: inherit;
   text-align: left;
   box-shadow: var(--shadow);
@@ -189,7 +191,7 @@ const privacyVisible = ref(false)
 }
 
 .privacy-entry:hover {
-  border-color: #b9d2f5;
+  border-color: var(--primary-border);
   transform: translateY(-1px);
   box-shadow: 0 12px 32px rgba(23, 105, 232, 0.08);
 }
@@ -202,7 +204,7 @@ const privacyVisible = ref(false)
   justify-content: center;
   border-radius: 13px;
   color: var(--primary);
-  background: #eaf2ff;
+  background: var(--primary-soft);
 }
 
 .privacy-entry > span:nth-child(2) {
@@ -212,13 +214,13 @@ const privacyVisible = ref(false)
 }
 
 .privacy-entry strong {
-  color: #273b59;
+  color: var(--text-strong);
   font-size: 15px;
 }
 
 .privacy-entry small {
   overflow: hidden;
-  color: #75849a;
+  color: var(--text-secondary);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;

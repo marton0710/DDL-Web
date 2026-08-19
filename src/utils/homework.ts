@@ -23,8 +23,6 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   day: '2-digit',
 })
 
-const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' })
-
 export function parseDeadline(deadline: string | null): Date | null {
   if (!deadline) return null
   const date = new Date(deadline)
@@ -58,21 +56,6 @@ function formatDuration(milliseconds: number): string {
   return `${minutes} 分`
 }
 
-export function getRemainingDisplay(
-  homework: Homework,
-  now = Date.now(),
-): { label: string; duration: string } {
-  if (homework.done) return { label: '已完成', duration: '' }
-  const deadline = parseDeadline(homework.deadline)
-  if (!deadline) return { label: '未设置', duration: '' }
-
-  const remaining = deadline.getTime() - now
-  return {
-    label: remaining < 0 ? '已逾期' : remaining <= 24 * 60 * 60 * 1000 ? '即将截止' : '剩余',
-    duration: formatDuration(Math.abs(remaining)),
-  }
-}
-
 export function formatRemaining(homework: Homework, now = Date.now()): string {
   if (homework.done) return '已完成'
   const deadline = parseDeadline(homework.deadline)
@@ -92,11 +75,6 @@ export function formatTimelineDate(deadline: string | null): string {
 export function formatTimelineTime(deadline: string | null): string {
   const date = parseDeadline(deadline)
   return date ? timeFormatter.format(date) : '--:--'
-}
-
-export function formatTimelineWeekday(deadline: string | null): string {
-  const date = parseDeadline(deadline)
-  return date ? weekdayFormatter.format(date) : ''
 }
 
 export function formatUpdatedAt(value: string | null): string {

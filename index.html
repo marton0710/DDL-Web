@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="聚合多个学习平台的作业与截止时间，让每一个截止时间都清晰可见。" />
     <link rel="icon" type="image/png" href="/assets/brand/logo-mark.png" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('ddl-theme-preference')
+        const theme = savedTheme === 'light' || savedTheme === 'dark'
+          ? savedTheme
+          : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      } catch {
+        document.documentElement.dataset.theme = 'light'
+      }
+    </script>
     <title>聚合截止线</title>
   </head>
   <body>
