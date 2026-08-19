@@ -1,15 +1,15 @@
-export interface PrivacyNoticeParagraph {
+interface PrivacyNoticeParagraph {
   summary: string
   detail: string
   tone?: 'warning'
 }
 
-export interface PrivacyNoticeSection {
+interface PrivacyNoticeSection {
   title: string
   paragraphs: readonly PrivacyNoticeParagraph[]
 }
 
-export interface PrivacyNoticeHighlight {
+interface PrivacyNoticeHighlight {
   title: string
   detail: string
 }

@@ -1,6 +1,4 @@
-export const PLATFORM_NAMES = ['学在重邮', '学习通', '雨课堂'] as const
-
-export type PlatformName = (typeof PLATFORM_NAMES)[number]
+export type PlatformName = '学在重邮' | '学习通' | '雨课堂'
 export type PlatformAuthMethod = 'cqupt_ids' | 'password'
 
 export interface LoginInput {
@@ -12,15 +10,23 @@ export interface LoginResult {
   name: string
 }
 
-export interface CurrentUser {
-  name: string
+export type QqPushStrategy = 'scheduled' | 'realtime'
+
+export interface QqPushConfig {
   qqchan_id: string | null
+  qq_push_strategy: QqPushStrategy
+  qq_push_at: string
+  qq_push_scope: number
+}
+
+export interface MeetScheduleConfig {
   meetschedule_key: string | null
 }
 
-export interface UserBindingPatch {
-  qqchan_id?: string | null
-  meetschedule_key?: string | null
+export interface CurrentUser {
+  name: string
+  qqpush_config: QqPushConfig
+  meetschedule_config: MeetScheduleConfig
 }
 
 export interface Homework {
@@ -39,15 +45,7 @@ export interface HomeworkResponse {
   homeworks: Homework[]
 }
 
-export interface HomeworkQuery {
-  num?: number
-  page?: number
-  platform?: PlatformName
-}
-
-export interface PasswordCredentials {
+export type PlatformCredentials = {
   username: string
   password: string
-}
-
-export type PlatformCredentials = PasswordCredentials | Record<string, never>
+} | Record<string, never>

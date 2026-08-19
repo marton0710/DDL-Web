@@ -1,5 +1,5 @@
 import { apiRequest } from './client'
-import type { CurrentUser, LoginInput, LoginResult, UserBindingPatch } from './types'
+import type { CurrentUser, LoginInput, LoginResult } from './types'
 
 export const authApi = {
   refresh() {
@@ -19,13 +19,6 @@ export const authApi = {
 
   getCurrentUser() {
     return apiRequest<CurrentUser>('/api/auth/me')
-  },
-
-  updateBindings(input: UserBindingPatch) {
-    return apiRequest<void>('/api/auth/userinfo', {
-      method: 'PATCH',
-      body: input,
-    })
   },
 
   logout() {

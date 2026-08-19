@@ -1,31 +1,13 @@
 import { apiRequest } from './client'
-import type {
-  HomeworkQuery,
-  HomeworkResponse,
-  PlatformName,
-} from './types'
-
-function homeworkUrl(query: HomeworkQuery = {}): string {
-  const search = new URLSearchParams()
-
-  if (query.num !== undefined) search.set('num', String(query.num))
-  if (query.page !== undefined) search.set('page', String(query.page))
-  if (query.platform !== undefined) search.set('platform', query.platform)
-
-  const queryString = search.toString()
-  return queryString ? `/api/homework?${queryString}` : '/api/homework'
-}
+import type { HomeworkResponse } from './types'
 
 export const homeworkApi = {
-  getHomeworks(query: HomeworkQuery = {}) {
-    return apiRequest<HomeworkResponse>(homeworkUrl(query))
+  getHomeworks() {
+    return apiRequest<HomeworkResponse>('/api/homework')
   },
 
-  refresh(platform?: PlatformName) {
-    const query = platform
-      ? `?${new URLSearchParams({ platform }).toString()}`
-      : ''
-    return apiRequest<string[]>(`/api/homework/refresh${query}`, {
+  refresh() {
+    return apiRequest<string[]>('/api/homework/refresh', {
       method: 'POST',
     })
   },

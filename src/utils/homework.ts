@@ -1,6 +1,6 @@
 import type { Homework } from '../api/types'
 
-export type HomeworkState = 'done' | 'overdue' | 'soon' | 'pending'
+type HomeworkState = 'done' | 'overdue' | 'soon' | 'pending'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',

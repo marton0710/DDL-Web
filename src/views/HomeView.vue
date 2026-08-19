@@ -86,18 +86,23 @@ const completionRate = computed(() => (
 function homeworkSortGroup(homework: Homework, now: number): number {
   if (homework.done) return 3
 
-  const deadline = parseDeadline(homework.deadline)
-  if (!deadline) return 2
-  return deadline.getTime() < now ? 1 : 0
+  const deadlineTimestamp = getDeadlineTimestamp(homework)
+  if (deadlineTimestamp === Number.MAX_SAFE_INTEGER) return 2
+  return deadlineTimestamp < now ? 1 : 0
+}
+
+function getDeadlineTimestamp(homework: Homework): number {
+  return parseDeadline(homework.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
+}
+
+function compareDeadlines(left: Homework, right: Homework): number {
+  return getDeadlineTimestamp(left) - getDeadlineTimestamp(right)
 }
 
 function compareHomeworks(left: Homework, right: Homework, now: number): number {
   const groupDifference = homeworkSortGroup(left, now) - homeworkSortGroup(right, now)
   if (groupDifference !== 0) return groupDifference
-
-  const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-  const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-  return leftTime - rightTime
+  return compareDeadlines(left, right)
 }
 
 const filteredHomeworks = computed(() => {
@@ -141,11 +146,7 @@ const priorityHomework = computed(() =>
       && parseDeadline(item.deadline) !== null
       && getHomeworkState(item) !== 'overdue'
     ))
-    .sort((left, right) => {
-      const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      return leftTime - rightTime
-    })[0] ?? null,
+    .sort(compareDeadlines)[0] ?? null,
 )
 
 const timelineHomeworks = computed(() =>
@@ -155,11 +156,7 @@ const timelineHomeworks = computed(() =>
       && isInCurrentWeek(item)
       && getHomeworkState(item) !== 'overdue'
     ))
-    .sort((left, right) => {
-      const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      return leftTime - rightTime
-    })
+    .sort(compareDeadlines)
     .slice(0, 5),
 )
 
