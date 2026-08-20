@@ -2,13 +2,6 @@ import { apiRequest } from './client'
 import type { CurrentUser, LoginInput, LoginResult } from './types'
 
 export const authApi = {
-  refresh() {
-    return apiRequest<void>('/api/auth/refresh', {
-      method: 'POST',
-      retryUnauthorized: false,
-    })
-  },
-
   login(input: LoginInput) {
     return apiRequest<LoginResult>('/api/auth/login', {
       method: 'POST',

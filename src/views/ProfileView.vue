@@ -86,8 +86,7 @@ const qqReminderForm = reactive({
   qqchanId: '',
   mode: 'scheduled' as QqPushStrategy,
   scheduledPushTime: DEFAULT_REMINDER_TIME,
-  scheduledCoverageHours: 24 as number | null,
-  realtimeCoverageHours: 24 as number | null,
+  coverageHours: 24 as number | null,
 })
 const meetScheduleKey = ref('')
 
@@ -118,26 +117,11 @@ const qqReminderTimeSummary = computed(() => {
 
   return `定时提醒 · ${formatReminderTime(config.qq_push_at)} 推送 · 临期 ${config.qq_push_scope} 小时`
 })
-const activeCoverageHours = computed<number | null>({
-  get: () => (
-    qqReminderForm.mode === 'scheduled'
-      ? qqReminderForm.scheduledCoverageHours
-      : qqReminderForm.realtimeCoverageHours
-  ),
-  set: (value) => {
-    if (qqReminderForm.mode === 'scheduled') {
-      qqReminderForm.scheduledCoverageHours = value
-    } else {
-      qqReminderForm.realtimeCoverageHours = value
-    }
-  },
-})
-const coverageHoursMin = computed(() => (qqReminderForm.mode === 'scheduled' ? 24 : 1))
 const canSaveQqReminder = computed(() => (
   Boolean(userInfo.qqpush_config.qqchan_id || qqReminderForm.qqchanId.trim())
-  && Number.isInteger(activeCoverageHours.value)
-  && Number(activeCoverageHours.value) >= coverageHoursMin.value
-  && Number(activeCoverageHours.value) <= 48
+  && Number.isInteger(qqReminderForm.coverageHours)
+  && Number(qqReminderForm.coverageHours) > 0
+  && Number(qqReminderForm.coverageHours) <= 48
 ))
 const canSaveMeetSchedule = computed(() => Boolean(meetScheduleKey.value.trim()))
 
@@ -181,12 +165,7 @@ function resetQqReminderDraft() {
   qqReminderForm.qqchanId = ''
   qqReminderForm.mode = config.qq_push_strategy
   qqReminderForm.scheduledPushTime = formatReminderTime(config.qq_push_at)
-  qqReminderForm.scheduledCoverageHours = config.qq_push_strategy === 'scheduled'
-    ? config.qq_push_scope
-    : 24
-  qqReminderForm.realtimeCoverageHours = config.qq_push_strategy === 'realtime'
-    ? config.qq_push_scope
-    : 24
+  qqReminderForm.coverageHours = config.qq_push_scope
 }
 
 function openQqReminderSettings() {
@@ -212,7 +191,7 @@ async function saveQqReminderSettings() {
       qqchan_id: qqchanId,
       qq_push_strategy: qqReminderForm.mode,
       qq_push_at: reminderTimeToApi(qqReminderForm.scheduledPushTime),
-      qq_push_scope: Number(activeCoverageHours.value),
+      qq_push_scope: Number(qqReminderForm.coverageHours),
     })
     applyCurrentUser(await authApi.getCurrentUser())
     qqReminderForm.qqchanId = ''
@@ -459,14 +438,14 @@ onMounted(async () => {
       <NCard class="profile-dialog qq-reminder-dialog" title="QQ机器人提醒" :bordered="false" role="dialog" aria-modal="true">
         <p class="dialog-description">绑定 QQ机器人提醒并选择提醒方式，以及需要关注的未来作业临期范围。</p>
         <NForm label-placement="top">
-          <NFormItem label="QQ机器人提醒绑定">
+          <NFormItem label="QQ机器人绑定码">
             <div class="qq-binding-control">
               <NInput
                 v-model:value="qqReminderForm.qqchanId"
-                :placeholder="userInfo.qqpush_config.qqchan_id ? `${userInfo.qqpush_config.qqchan_id}；输入新值可更换` : '请输入绑定标识'"
+                :placeholder="userInfo.qqpush_config.qqchan_id ? `${userInfo.qqpush_config.qqchan_id}；输入新值可更换` : '请输入绑定码'"
               />
               <div class="binding-guide-entry">
-                <span><NIcon><HelpCircleOutline /></NIcon>还没有绑定标识？</span>
+                <span><NIcon><HelpCircleOutline /></NIcon>还没有绑定码？</span>
                 <button type="button" @click="qqBindingGuideOpen = true">
                   查看绑定教程 <NIcon><ChevronForwardOutline /></NIcon>
                 </button>
@@ -527,13 +506,13 @@ onMounted(async () => {
             </NFormItem>
             <NFormItem label="临期范围">
               <NInputNumber
-                v-model:value="activeCoverageHours"
+                v-model:value="qqReminderForm.coverageHours"
                 class="setting-control"
-                :min="coverageHoursMin"
+                :min="1"
                 :max="48"
                 :precision="0"
                 :step="1"
-                :placeholder="qqReminderForm.mode === 'scheduled' ? '24–48' : '1–48'"
+                placeholder="1–48"
               >
                 <template #suffix>小时</template>
               </NInputNumber>
@@ -558,7 +537,7 @@ onMounted(async () => {
         role="dialog"
         aria-modal="true"
       >
-        <p class="binding-guide-intro">完成下面三步即可获取绑定标识</p>
+        <p class="binding-guide-intro">完成下面三步即可获取并填写绑定码</p>
 
         <ol class="binding-guide-steps">
           <li>
@@ -587,19 +566,18 @@ onMounted(async () => {
           <li>
             <header class="binding-guide-step-heading">
               <b>2</b>
-              <div><strong>发送帮助指令</strong><span>添加成功后，在聊天窗口发送一次如下命令</span></div>
+              <div><strong>获取绑定码</strong><span>发送指令或使用聊天窗口快捷菜单</span></div>
             </header>
             <div class="bot-help-command">
-              <code>/help</code>
-              <span>机器人会回复后续绑定引导。</span>
+              <span>任选一种方式：向机器人发送 <code>/help</code>，或点击快捷菜单中的 <strong class="bot-menu-action">获取绑定码</strong>。</span>
             </div>
           </li>
           <li>
             <header class="binding-guide-step-heading">
               <b>3</b>
-              <div><strong>填写绑定标识</strong><span>按照帮助菜单完成操作</span></div>
+              <div><strong>填写绑定码</strong><span>返回设置窗口完成绑定</span></div>
             </header>
-            <p class="binding-guide-step-copy">获取绑定标识后，返回上一层窗口，将它粘贴到“QQ机器人提醒绑定”输入框并保存。</p>
+            <p class="binding-guide-step-copy">获取绑定码后，返回上一层窗口，将它粘贴到“QQ机器人绑定码”输入框并保存。</p>
           </li>
         </ol>
 
@@ -649,7 +627,12 @@ onMounted(async () => {
           <NFormItem label="平台账号"><NInput v-model:value="platformCredentials.username" autocomplete="username" /></NFormItem>
           <NFormItem label="平台密码"><NInput v-model:value="platformCredentials.password" type="password" show-password-on="click" autocomplete="current-password" /></NFormItem>
         </NForm>
-        <div class="dialog-actions"><NButton @click="bindDialogOpen = false">取消</NButton><NButton type="primary" :loading="bindLoading" @click="submitPlatformBinding">确认绑定</NButton></div>
+        <div class="dialog-actions">
+          <div class="dialog-primary-actions">
+            <NButton @click="bindDialogOpen = false">取消</NButton>
+            <NButton type="primary" :loading="bindLoading" @click="submitPlatformBinding">确认绑定</NButton>
+          </div>
+        </div>
       </NCard>
     </NModal>
   </div>
@@ -779,6 +762,7 @@ onMounted(async () => {
 .bot-number-copy button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--primary-border); border-radius: 8px; padding: 6px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 10px; font-weight: 700; cursor: pointer; }
 .bot-help-command { display: flex; align-items: center; gap: 10px; margin: 12px 0 0 36px; }
 .bot-help-command code { border-radius: 8px; padding: 6px 10px; color: var(--primary-soft-text); background: var(--primary-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 750; user-select: all; }
+.bot-menu-action { display: inline-block; border-radius: 7px; padding: 4px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 11px; font-weight: 750; white-space: nowrap; }
 .bot-help-command span,
 .binding-guide-step-copy { color: var(--text-secondary); font-size: 10px; line-height: 1.65; }
 .binding-guide-step-copy { margin: 9px 0 0 36px; }

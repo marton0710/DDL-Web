@@ -26,19 +26,20 @@ const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const submitting = ref(false)
-const refreshingSession = ref(true)
+const checkingSession = ref(true)
 const privacyVisible = ref(false)
 const privacyAccepted = ref(false)
 
-async function refreshSession() {
+async function checkSession() {
   try {
-    await authApi.refresh()
+    const currentUser = await authApi.getCurrentUser()
+    setDisplayName(currentUser.name)
     await router.replace('/home')
   } catch {
     clearSession()
-    // refresh token 不存在、失效或刷新失败时停留在登录页。
+    // 登录状态不存在、失效或检查失败时停留在登录页。
   } finally {
-    refreshingSession.value = false
+    checkingSession.value = false
   }
 }
 
@@ -68,7 +69,7 @@ async function submitLogin() {
   }
 }
 
-onMounted(refreshSession)
+onMounted(checkSession)
 </script>
 
 <template>
@@ -131,8 +132,8 @@ onMounted(refreshSession)
             type="primary"
             size="large"
             block
-            :loading="submitting || refreshingSession"
-            :disabled="submitting || refreshingSession || !privacyAccepted"
+            :loading="submitting || checkingSession"
+            :disabled="submitting || checkingSession || !privacyAccepted"
           >
             登录
           </NButton>

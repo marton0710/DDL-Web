@@ -80,7 +80,8 @@ export function formatTimelineTime(deadline: string | null): string {
 export function formatUpdatedAt(value: string | null): string {
   if (!value) return '尚未同步'
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '时间未知' : dateTimeFormatter.format(date)
+  if (Number.isNaN(date.getTime())) return '时间未知'
+  return date.getFullYear() <= 1970 ? '尚未同步' : dateTimeFormatter.format(date)
 }
 
 export function isInCurrentWeek(homework: Homework, now = new Date()): boolean {

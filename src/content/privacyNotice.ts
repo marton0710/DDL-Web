@@ -14,7 +14,7 @@ interface PrivacyNoticeHighlight {
   detail: string
 }
 
-export const PRIVACY_NOTICE_UPDATED_AT = '2026年8月18日'
+export const PRIVACY_NOTICE_UPDATED_AT = '2026年8月20日'
 
 export const PRIVACY_NOTICE_HIGHLIGHTS: readonly PrivacyNoticeHighlight[] = [
   {
@@ -53,7 +53,7 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
       },
       {
         summary: '可选功能与日志：',
-        detail: 'QQ机器人提醒所需的绑定标识和 MeetSchedule Key 属于可选信息，只有在您主动填写并保存时才会处理。为了保障服务稳定和排查异常，服务器还可能记录必要的访问日志，例如访问时间、请求地址、响应状态、IP 地址和浏览器基本信息。',
+        detail: 'QQ机器人提醒所需的绑定码和 MeetSchedule Key 属于可选信息，只有在您主动填写并保存时才会处理。为了保障服务稳定和排查异常，服务器还可能记录必要的访问日志，例如访问时间、请求地址、响应状态、IP 地址和浏览器基本信息。',
       },
     ],
   },
@@ -92,7 +92,7 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
       },
       {
         summary: '保存期限：',
-        detail: '在您继续使用账号期间，我们会保存维持服务所必需的信息。平台凭据和 Cookie 会保存到您解绑该平台或注销账号为止；同步作业会在平台解绑、账号注销或数据更新时删除或替换；访问日志仅在保障安全、排查故障和履行法定义务所需的期限内保存。法律另有规定的，按其要求处理。',
+        detail: '在您继续使用账号期间，我们会保存维持服务所必需的信息。平台凭据和 Cookie 会保存到您解绑该平台或注销账号为止；同步作业会持续累积，并在对应平台解绑或账号注销时删除；访问日志仅在保障安全、排查故障和履行法定义务所需的期限内保存。法律另有规定的，按其要求处理。',
       },
       {
         summary: '安全事件：',
@@ -105,11 +105,11 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
     paragraphs: [
       {
         summary: '解绑与取消绑定：',
-        detail: '您可以在“我的”页面查看平台连接状态、解绑学习平台，也可以更换或取消 QQ机器人提醒和 Meet 课程表绑定。解绑或取消绑定后，我们会删除对应的登录凭据、Cookie、绑定标识和相关配置；解绑学习平台还会删除该平台已经同步的作业。',
+        detail: '您可以在“我的”页面查看平台连接状态、解绑学习平台，也可以更换或取消 QQ机器人提醒和 Meet 课程表绑定。解绑学习平台后，我们会删除对应的登录凭据、Cookie 和该平台已经同步的作业；取消可选功能绑定后，我们会清除对应的绑定码或同步密钥。',
       },
       {
         summary: '退出登录：',
-        detail: '退出登录只会结束当前浏览器中的登录会话，不会自动删除服务端账号、平台绑定或作业数据。',
+        detail: '退出登录会使当前账号已有的登录令牌失效，其他设备可能也需要重新登录；该操作不会删除服务端账号、平台绑定或作业数据。',
       },
       {
         summary: '注销账户：',
@@ -122,7 +122,7 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
       },
       {
         summary: '请勿公开敏感信息：',
-        detail: '请不要在公开 Issue 中填写密码、Cookie、Token、QQ机器人提醒绑定标识、MeetSchedule Key 或其他敏感信息。如果处理请求需要这些信息，维护者会另行提供更安全的沟通方式。',
+        detail: '请不要在公开 Issue 中填写密码、Cookie、Token、QQ机器人提醒绑定码、MeetSchedule Key 或其他敏感信息。如果处理请求需要这些信息，维护者会另行提供更安全的沟通方式。',
         tone: 'warning',
       },
       {

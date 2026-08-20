@@ -53,7 +53,7 @@ const mobileOpen = ref(false)
   <NDrawer v-model:show="mobileOpen" placement="right" :width="282">
     <NDrawerContent closable>
       <template #header>
-        <div class="drawer-profile"><span>{{ avatarText }}</span><div><strong>{{ displayName || '个人中心' }}</strong><small>聚合截止线</small></div></div>
+        <div class="drawer-profile"><span>{{ avatarText }}</span><div><strong>{{ displayName || '个人中心' }}</strong></div></div>
       </template>
       <nav class="mobile-nav" aria-label="移动端导航">
         <RouterLink to="/home" @click="mobileOpen = false">作业</RouterLink>

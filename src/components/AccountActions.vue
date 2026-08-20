@@ -123,7 +123,7 @@ onBeforeUnmount(clearCountdown)
       aria-modal="true"
       title="确认退出登录？"
     >
-      <p>退出后，需要重新登录才能继续使用聚合截止线（提醒功能不受影响）。</p>
+      <p>退出后，该账号已有的登录状态将失效，其他设备可能也需要重新登录（提醒功能不受影响）。</p>
       <div class="dialog-actions">
         <NButton :disabled="logoutLoading" @click="logoutDialogOpen = false">取消</NButton>
         <NButton type="error" :loading="logoutLoading" @click="confirmLogout">确认退出</NButton>
