@@ -58,9 +58,6 @@
   color: #f5f7fa;
   background: #0b0f14;
   color-scheme: dark;
-  --primary: #1769e8;
-  --primary-hover: #1b70ed;
-  --primary-deep: #0f5ed9;
   --primary-text: #5b9eff;
   --primary-soft: #102b4e;
   --primary-soft-hover: #15365e;
@@ -181,10 +178,6 @@ select:focus-visible {
   line-height: 1.4;
   font-weight: 700;
   color: var(--text);
-}
-
-.muted {
-  color: var(--muted);
 }
 
 .icon-circle {

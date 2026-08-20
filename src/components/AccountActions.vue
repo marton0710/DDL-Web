@@ -104,7 +104,7 @@ onBeforeUnmount(clearCountdown)
 </script>
 
 <template>
-  <div class="account-actions" :class="variant">
+  <div class="account-actions" :class="{ mobile: props.variant === 'mobile' }">
     <button v-if="props.showLogout" class="account-action logout" type="button" @click="openLogoutDialog">
       <NIcon><LogOutOutline /></NIcon>
       退出登录
@@ -212,10 +212,6 @@ onBeforeUnmount(clearCountdown)
   color: var(--danger-text);
   border-color: var(--danger-text);
   background: var(--danger-container);
-}
-
-.account-actions.mobile {
-  gap: 8px;
 }
 
 .account-actions.mobile .account-action {

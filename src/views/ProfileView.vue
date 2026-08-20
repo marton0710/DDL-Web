@@ -49,6 +49,7 @@ const bindLoading = ref(false)
 const bindAuthMethod = ref<PlatformAuthMethod | null>(null)
 const qqReminderDialogOpen = ref(false)
 const qqBindingGuideOpen = ref(false)
+const qqBotNumberInput = ref<HTMLInputElement | null>(null)
 const meetScheduleDialogOpen = ref(false)
 const qqReminderSaving = ref(false)
 const meetScheduleSaving = ref(false)
@@ -67,6 +68,8 @@ const userInfo = reactive<CurrentUser>({
 })
 
 const QQ_BOT_NUMBER = '4014491707'
+const QQ_BOT_JOIN_URL = 'https://qun.qq.com/qunpro/robot/qunshare?robot_appid=1905400907&robot_uin=4014491707&biz_type=0&jumpsource=shorturl'
+const canOpenQqBotDirectly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 const DEFAULT_REMINDER_TIME = '07:00'
 
 function formatReminderTime(value: string): string {
@@ -173,13 +176,44 @@ function openQqReminderSettings() {
   qqReminderDialogOpen.value = true
 }
 
+function selectQqBotNumber() {
+  const input = qqBotNumberInput.value
+  if (!input) return null
+  input.focus({ preventScroll: true })
+  input.select()
+  input.setSelectionRange(0, input.value.length)
+  return input
+}
+
 async function copyQqBotNumber() {
-  try {
-    await navigator.clipboard.writeText(QQ_BOT_NUMBER)
-    message.success('机器人 QQ 号已复制')
-  } catch {
-    message.warning('复制失败，请手动复制 QQ 号')
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(QQ_BOT_NUMBER)
+      message.success('机器人 QQ 号已复制')
+      return
+    } catch {
+      message.warning('复制失败，请长按 QQ 号手动复制')
+      return
+    }
   }
+
+  const input = selectQqBotNumber()
+  if (!input) {
+    message.warning('无法选择 QQ 号，请刷新页面后重试')
+    return
+  }
+
+  let copied = false
+  try {
+    copied = document.execCommand('copy')
+  } catch {
+    // 由下方的手动复制提示统一处理。
+  }
+  input.setSelectionRange(input.value.length, input.value.length)
+  input.blur()
+
+  if (copied) message.success('机器人 QQ 号已复制')
+  else message.warning('复制失败，请长按 QQ 号手动复制')
 }
 
 async function saveQqReminderSettings() {
@@ -548,13 +582,28 @@ onMounted(async () => {
             <div class="bot-add-methods">
               <article class="bot-add-method qr-method">
                 <header><NIcon><QrCodeOutline /></NIcon><strong>扫描二维码</strong></header>
-                <img src="/assets/qqbot-1905400907.png" alt="聚合截止线 QQ机器人二维码" />
-                <small>使用手机 QQ 扫一扫并添加</small>
+                <a
+                  class="bot-qr-link"
+                  :class="{ interactive: canOpenQqBotDirectly }"
+                  :href="canOpenQqBotDirectly ? QQ_BOT_JOIN_URL : undefined"
+                  :target="canOpenQqBotDirectly ? '_blank' : undefined"
+                  :rel="canOpenQqBotDirectly ? 'noopener noreferrer' : undefined"
+                  :aria-label="canOpenQqBotDirectly ? '打开 QQ 添加聚合截止线机器人' : undefined"
+                >
+                  <img src="/assets/qqbot-1905400907.png" alt="聚合截止线 QQ机器人二维码" />
+                </a>
+                <small>{{ canOpenQqBotDirectly ? '使用手机 QQ 扫一扫，或点击二维码直接添加好友' : '请使用手机 QQ 扫一扫并添加' }}</small>
               </article>
               <article class="bot-add-method number-method">
                 <header><NIcon><ChatbubbleEllipsesOutline /></NIcon><strong>搜索 QQ 号</strong></header>
                 <div class="bot-number-copy">
-                  <code>{{ QQ_BOT_NUMBER }}</code>
+                  <input
+                    ref="qqBotNumberInput"
+                    :value="QQ_BOT_NUMBER"
+                    aria-label="机器人 QQ 号"
+                    readonly
+                    @click="selectQqBotNumber"
+                  />
                   <button type="button" aria-label="复制机器人 QQ 号" @click="copyQqBotNumber">
                     <NIcon><CopyOutline /></NIcon>复制
                   </button>
@@ -569,7 +618,7 @@ onMounted(async () => {
               <div><strong>获取绑定码</strong><span>发送指令或使用聊天窗口快捷菜单</span></div>
             </header>
             <div class="bot-help-command">
-              <span>任选一种方式：向机器人发送 <code>/help</code>，或点击快捷菜单中的 <strong class="bot-menu-action">获取绑定码</strong>。</span>
+              <span>任选一种方式：向机器人发送 <code>/register</code>，或点击快捷菜单中的 <strong class="bot-menu-action">获取绑定码</strong>。</span>
             </div>
           </li>
           <li>
@@ -755,12 +804,15 @@ onMounted(async () => {
 .bot-add-method > header :deep(.n-icon) { color: var(--primary-text); font-size: 17px; }
 .bot-add-method > header strong { color: var(--text-strong); font-size: 12px; }
 .bot-add-method small { color: var(--text-tertiary); font-size: 9px; line-height: 1.5; }
-.qr-method img { width: 132px; height: 132px; margin: 10px 0 7px; border: 6px solid #fff; border-radius: 12px; object-fit: cover; }
+.bot-qr-link { display: inline-flex; margin: 10px 0 7px; border-radius: 12px; }
+.bot-qr-link.interactive:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.qr-method img { width: 132px; height: 132px; border: 6px solid #fff; border-radius: 12px; object-fit: cover; transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.bot-qr-link.interactive:hover img { box-shadow: 0 8px 20px rgba(23, 105, 232, 0.18); transform: translateY(-2px); }
 .number-method { justify-content: center; }
 .bot-number-copy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 24px 0 20px; }
-.bot-number-copy code { color: var(--text-strong); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 23px; font-weight: 750; letter-spacing: 1px; }
+.bot-number-copy input { width: 154px; min-width: 0; border: 0; padding: 0; outline: 0; color: var(--text-strong); background: transparent; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 23px; font-weight: 750; letter-spacing: 1px; text-align: center; }
 .bot-number-copy button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--primary-border); border-radius: 8px; padding: 6px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 10px; font-weight: 700; cursor: pointer; }
-.bot-help-command { display: flex; align-items: center; gap: 10px; margin: 12px 0 0 36px; }
+.bot-help-command { margin: 12px 0 0 36px; }
 .bot-help-command code { border-radius: 8px; padding: 6px 10px; color: var(--primary-soft-text); background: var(--primary-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 750; user-select: all; }
 .bot-menu-action { display: inline-block; border-radius: 7px; padding: 4px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 11px; font-weight: 750; white-space: nowrap; }
 .bot-help-command span,
@@ -800,7 +852,8 @@ onMounted(async () => {
 @media (max-width: 520px) {
   .binding-guide-entry { align-items: flex-start; flex-direction: column; gap: 5px; }
   .bot-add-methods { grid-template-columns: 1fr; }
-  .bot-help-command { align-items: flex-start; flex-direction: column; margin-left: 36px; }
+  .reminder-mode-switch { grid-template-columns: 1fr; }
+  .reminder-mode-copy small { overflow: visible; text-overflow: clip; white-space: normal; }
   .reminder-setting-grid { grid-template-columns: 1fr; gap: 0; }
   .dialog-actions { display: block; }
   .dialog-actions.has-unbind { display: flex; align-items: stretch; flex-direction: column-reverse; gap: 10px; }

@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
 import { NDrawer, NDrawerContent, NIcon, NSwitch } from 'naive-ui'
-import { MenuOutline, MoonOutline, PersonOutline, SunnyOutline } from '@vicons/ionicons5'
+import {
+  ClipboardOutline,
+  InformationCircleOutline,
+  MenuOutline,
+  MoonOutline,
+  PersonOutline,
+  SunnyOutline,
+} from '@vicons/ionicons5'
 import AccountActions from './AccountActions.vue'
 import { useSession } from '../state/session'
 import { useTheme } from '../state/theme'
 
-const route = useRoute()
 const { avatarText, displayName } = useSession()
 const { isDark, toggleTheme } = useTheme()
 const mobileOpen = ref(false)
@@ -24,9 +29,9 @@ const mobileOpen = ref(false)
       </RouterLink>
 
       <nav class="desktop-nav" aria-label="主导航">
-        <RouterLink to="/home" :class="{ active: route.name === 'home' }">作业</RouterLink>
-        <RouterLink to="/profile" :class="{ active: route.name === 'profile' }">我的</RouterLink>
-        <RouterLink to="/about" :class="{ active: route.name === 'about' }">关于</RouterLink>
+        <RouterLink to="/home">作业</RouterLink>
+        <RouterLink to="/profile">我的</RouterLink>
+        <RouterLink to="/about">关于</RouterLink>
       </nav>
 
       <div class="header-actions">
@@ -53,12 +58,12 @@ const mobileOpen = ref(false)
   <NDrawer v-model:show="mobileOpen" placement="right" :width="282">
     <NDrawerContent closable>
       <template #header>
-        <div class="drawer-profile"><span>{{ avatarText }}</span><div><strong>{{ displayName || '个人中心' }}</strong></div></div>
+        <div class="drawer-profile"><span>{{ avatarText }}</span><strong>{{ displayName || '个人中心' }}</strong></div>
       </template>
       <nav class="mobile-nav" aria-label="移动端导航">
-        <RouterLink to="/home" @click="mobileOpen = false">作业</RouterLink>
+        <RouterLink to="/home" @click="mobileOpen = false"><NIcon><ClipboardOutline /></NIcon>作业</RouterLink>
         <RouterLink to="/profile" @click="mobileOpen = false"><NIcon><PersonOutline /></NIcon>我的</RouterLink>
-        <RouterLink to="/about" @click="mobileOpen = false">关于项目</RouterLink>
+        <RouterLink to="/about" @click="mobileOpen = false"><NIcon><InformationCircleOutline /></NIcon>关于项目</RouterLink>
       </nav>
       <div class="mobile-session-action">
         <AccountActions
@@ -127,7 +132,7 @@ const mobileOpen = ref(false)
 }
 
 .desktop-nav a:hover { color: var(--primary-text); background: var(--primary-soft); }
-.desktop-nav a.active { color: var(--primary-soft-text); background: var(--primary-soft); }
+.desktop-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
 
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .theme-switch { display: flex; align-items: center; gap: 7px; color: var(--text-tertiary); font-size: 17px; }
@@ -150,12 +155,10 @@ const mobileOpen = ref(false)
 .mobile-menu-button { display: none; border: 0; padding: 7px; color: var(--text-secondary); background: transparent; font-size: 25px; cursor: pointer; }
 .drawer-profile { display: flex; align-items: center; gap: 12px; }
 .drawer-profile > span { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: white; background: var(--primary); }
-.drawer-profile > div { display: grid; }
 .drawer-profile strong { color: var(--text-strong); font-size: 14px; }
-.drawer-profile small { margin-top: 2px; color: var(--text-tertiary); font-size: 10px; }
 
 .mobile-nav { display: grid; gap: 7px; }
-.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border: 0; border-radius: 10px; padding: 0 13px; color: var(--text-secondary); background: transparent; font-size: 13px; font-weight: 650; text-align: left; cursor: pointer; }
+.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border-radius: 10px; padding: 0 13px; color: var(--text-secondary); font-size: 13px; font-weight: 650; }
 .mobile-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
 .mobile-session-action { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .mobile-delete-action { width: 100%; }
