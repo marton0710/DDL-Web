@@ -81,7 +81,7 @@ export function formatUpdatedAt(value: string | null): string {
   if (!value) return '尚未同步'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '时间未知'
-  return date.getFullYear() <= 1970 ? '尚未同步' : dateTimeFormatter.format(date)
+  return dateTimeFormatter.format(date)
 }
 
 export function isInCurrentWeek(homework: Homework, now = new Date()): boolean {

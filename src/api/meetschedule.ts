@@ -8,4 +8,10 @@ export const meetScheduleApi = {
       body: input,
     })
   },
+
+  unbind() {
+    return apiRequest<void>('/api/meetschedule/bind', {
+      method: 'DELETE',
+    })
+  },
 }

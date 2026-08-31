@@ -62,9 +62,7 @@ const userInfo = reactive<CurrentUser>({
     qq_push_at: '07:00:00',
     qq_push_scope: 24,
   },
-  meetschedule_config: {
-    meetschedule_key: null,
-  },
+  meetschedule_config: null,
 })
 
 const QQ_BOT_NUMBER = '4014491707'
@@ -107,9 +105,10 @@ const platformCredentials = reactive({ username: '', password: '' })
 
 const profileName = computed(() => userInfo.name || displayName.value || '同学')
 const connectedPlatformCount = computed(() => platforms.filter((item) => item.status === 'bound').length)
+const meetScheduleBindingKey = computed(() => userInfo.meetschedule_config?.meetschedule_key ?? '')
 const connectedServiceCount = computed(() => (
   Number(Boolean(userInfo.qqpush_config.qqchan_id))
-  + Number(Boolean(userInfo.meetschedule_config.meetschedule_key))
+  + Number(Boolean(meetScheduleBindingKey.value))
 ))
 const qqReminderTimeSummary = computed(() => {
   const config = userInfo.qqpush_config
@@ -126,7 +125,9 @@ const canSaveQqReminder = computed(() => (
   && Number(qqReminderForm.coverageHours) > 0
   && Number(qqReminderForm.coverageHours) <= 48
 ))
-const canSaveMeetSchedule = computed(() => Boolean(meetScheduleKey.value.trim()))
+const canSaveMeetSchedule = computed(() => (
+  !meetScheduleBindingKey.value && Boolean(meetScheduleKey.value.trim())
+))
 
 async function handleUnauthorized(error: unknown): Promise<boolean> {
   if (!isAuthenticationError(error)) return false
@@ -252,6 +253,7 @@ async function saveMeetScheduleSettings() {
     applyCurrentUser(await authApi.getCurrentUser())
     meetScheduleKey.value = ''
     meetScheduleDialogOpen.value = false
+    message.success('Meet 课程表绑定完成')
   } catch (error) {
     if (await handleUnauthorized(error)) return
     message.error(getApiErrorMessage(error, 'Meet 课程表保存失败'))
@@ -282,11 +284,11 @@ async function unbindQqReminder() {
 async function unbindMeetSchedule() {
   meetScheduleSaving.value = true
   try {
-    await meetScheduleApi.bind({ meetschedule_key: null })
-    userInfo.meetschedule_config.meetschedule_key = null
+    await meetScheduleApi.unbind()
+    userInfo.meetschedule_config = null
     meetScheduleKey.value = ''
     meetScheduleDialogOpen.value = false
-    message.success('已取消 Meet 课程表绑定')
+    message.success('Meet 课程表解绑请求已提交')
   } catch (error) {
     if (await handleUnauthorized(error)) return
     message.error(getApiErrorMessage(error, '取消 Meet 课程表绑定失败'))
@@ -450,7 +452,7 @@ onMounted(async () => {
               </button>
               <button type="button" class="service-item" @click="openMeetScheduleSettings">
                 <span class="service-icon layers"><NIcon><LayersOutline /></NIcon></span>
-                <div><strong>Meet 课程表</strong><span>{{ userInfo.meetschedule_config.meetschedule_key || '未配置' }}</span></div>
+                <div><strong>Meet 课程表</strong><span>{{ meetScheduleBindingKey || '未配置' }}</span></div>
                 <NIcon class="service-chevron"><ChevronForwardOutline /></NIcon>
               </button>
             </div>
@@ -638,22 +640,26 @@ onMounted(async () => {
 
     <NModal v-model:show="meetScheduleDialogOpen" :mask-closable="false">
       <NCard class="profile-dialog" title="Meet 课程表" :bordered="false" role="dialog" aria-modal="true">
-        <p class="dialog-description">设置 Meet 课程表同步密钥。</p>
-        <NForm label-placement="top">
+        <p class="dialog-description">
+          {{ meetScheduleBindingKey
+            ? '当前已绑定 Meet 课程表。如需更换同步密钥，请先解绑。'
+            : 'MeetSchedule Key 至少需要“读取课表、读取事件、写入事件”权限。绑定后，作业及完成状态会与 Meet 课程表同步。' }}
+        </p>
+        <NForm v-if="!meetScheduleBindingKey" label-placement="top">
           <NFormItem label="MeetSchedule Key">
             <NInput
               v-model:value="meetScheduleKey"
               type="password"
               show-password-on="click"
-              :placeholder="userInfo.meetschedule_config.meetschedule_key ? `${userInfo.meetschedule_config.meetschedule_key}；输入新值可更换` : '请输入同步密钥'"
+              placeholder="请输入同步密钥"
             />
           </NFormItem>
         </NForm>
-        <div class="dialog-actions" :class="{ 'has-unbind': userInfo.meetschedule_config.meetschedule_key }">
-          <NButton v-if="userInfo.meetschedule_config.meetschedule_key" type="error" secondary :loading="meetScheduleSaving" @click="unbindMeetSchedule">取消绑定</NButton>
+        <div class="dialog-actions" :class="{ 'has-unbind': meetScheduleBindingKey }">
+          <NButton v-if="meetScheduleBindingKey" type="error" secondary :loading="meetScheduleSaving" @click="unbindMeetSchedule">取消绑定</NButton>
           <div class="dialog-primary-actions">
             <NButton :disabled="meetScheduleSaving" @click="meetScheduleDialogOpen = false">取消</NButton>
-            <NButton type="primary" :loading="meetScheduleSaving" :disabled="!canSaveMeetSchedule" @click="saveMeetScheduleSettings">保存</NButton>
+            <NButton v-if="!meetScheduleBindingKey" type="primary" :loading="meetScheduleSaving" :disabled="!canSaveMeetSchedule" @click="saveMeetScheduleSettings">绑定</NButton>
           </div>
         </div>
       </NCard>

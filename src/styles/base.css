@@ -149,7 +149,6 @@ select:focus-visible {
 }
 
 .page-shell {
-  width: min(1536px, calc(100% - 48px));
   margin: 0 auto;
 }
 
@@ -189,10 +188,6 @@ select:focus-visible {
 }
 
 @media (max-width: 768px) {
-  .page-shell {
-    width: min(100% - 24px, 1536px);
-  }
-
   .section-title {
     font-size: 19px;
   }

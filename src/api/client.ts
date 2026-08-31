@@ -28,13 +28,6 @@ export class ApiError extends Error {
   }
 }
 
-export class AuthenticationError extends ApiError {
-  constructor(error: ApiError) {
-    super(error.status, error.message, error.payload)
-    this.name = 'AuthenticationError'
-  }
-}
-
 let sessionRefreshPromise: Promise<void> | null = null
 
 function getPayloadMessage(payload: unknown): string | null {
@@ -115,28 +108,21 @@ export async function apiRequest<T>(
     if (!(error instanceof ApiError) || error.status !== 401) {
       throw error
     }
-    if (!retryUnauthorized) throw new AuthenticationError(error)
+    if (!retryUnauthorized) throw error
 
     try {
       await refreshSession()
     } catch (refreshError) {
-      if (isRefreshCredentialError(refreshError)) throw new AuthenticationError(error)
+      if (isRefreshCredentialError(refreshError)) throw error
       throw refreshError
     }
 
-    try {
-      return await sendRequest<T>(path, requestOptions)
-    } catch (retryError) {
-      if (retryError instanceof ApiError && retryError.status === 401) {
-        throw new AuthenticationError(retryError)
-      }
-      throw retryError
-    }
+    return sendRequest<T>(path, requestOptions)
   }
 }
 
-export function isAuthenticationError(error: unknown): error is AuthenticationError {
-  return error instanceof AuthenticationError
+export function isAuthenticationError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 401
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {

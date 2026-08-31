@@ -56,11 +56,6 @@ const todayLabel = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long',
 }).format(new Date())
 
-const courseOptions = computed(() =>
-  [...new Set(homeworks.value.map((item) => item.course_name).filter(Boolean))]
-    .sort((left, right) => left.localeCompare(right, 'zh-CN')),
-)
-
 const platformSelectOptions = [
   { label: '全部平台', value: 'all' },
   ...PLATFORM_META.map((platform) => ({ label: platform.name, value: platform.name })),
@@ -68,7 +63,9 @@ const platformSelectOptions = [
 
 const courseSelectOptions = computed(() => [
   { label: '全部课程', value: 'all' },
-  ...courseOptions.value.map((course) => ({ label: course, value: course })),
+  ...[...new Set(homeworks.value.map((item) => item.course_name).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    .map((course) => ({ label: course, value: course })),
 ])
 
 const statistics = computed(() => ({
@@ -118,12 +115,9 @@ const filteredHomeworks = computed(() => {
         && !`${homework.title} ${homework.course_name}`.toLocaleLowerCase('zh-CN').includes(normalizedKeyword)
       ) return false
 
-      const state = getHomeworkState(homework)
       if (taskFilter.value === 'pending') return !homework.done
-      if (taskFilter.value === 'soon') return state === 'soon'
-      if (taskFilter.value === 'overdue') return state === 'overdue'
-      if (taskFilter.value === 'done') return state === 'done'
-      return true
+      if (taskFilter.value === 'all') return true
+      return getHomeworkState(homework) === taskFilter.value
     })
     .sort((left, right) => compareHomeworks(left, right, now))
 })

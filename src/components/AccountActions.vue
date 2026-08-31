@@ -44,10 +44,6 @@ function clearCountdown() {
   }
 }
 
-function openLogoutDialog() {
-  logoutDialogOpen.value = true
-}
-
 function openDeletionDialog() {
   if (!props.username) {
     message.warning('用户信息尚未加载完成')
@@ -105,7 +101,7 @@ onBeforeUnmount(clearCountdown)
 
 <template>
   <div class="account-actions" :class="{ mobile: props.variant === 'mobile' }">
-    <button v-if="props.showLogout" class="account-action logout" type="button" @click="openLogoutDialog">
+    <button v-if="props.showLogout" class="account-action logout" type="button" @click="logoutDialogOpen = true">
       <NIcon><LogOutOutline /></NIcon>
       退出登录
     </button>

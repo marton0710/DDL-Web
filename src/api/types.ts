@@ -20,13 +20,13 @@ export interface QqPushConfig {
 }
 
 export interface MeetScheduleConfig {
-  meetschedule_key: string | null
+  meetschedule_key: string
 }
 
 export interface CurrentUser {
   name: string
   qqpush_config: QqPushConfig
-  meetschedule_config: MeetScheduleConfig
+  meetschedule_config: MeetScheduleConfig | null
 }
 
 export interface Homework {
