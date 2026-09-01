@@ -1,11 +1,34 @@
 import { apiRequest } from './client'
-import type { CurrentUser, LoginInput, LoginResult } from './types'
+import type {
+  CurrentUser,
+  LoginInput,
+  LoginQRCodeResult,
+  LoginResult,
+  QRCodeLoginInput,
+  QRCodeLoginResult,
+} from './types'
 
 export const authApi = {
   login(input: LoginInput) {
     return apiRequest<LoginResult>('/api/auth/login', {
       method: 'POST',
       body: input,
+      retryUnauthorized: false,
+    })
+  },
+
+  getLoginQRCode(signal?: AbortSignal) {
+    return apiRequest<LoginQRCodeResult>('/api/auth/qrcode_login', {
+      signal,
+      retryUnauthorized: false,
+    })
+  },
+
+  loginWithQRCode(input: QRCodeLoginInput, signal?: AbortSignal) {
+    return apiRequest<QRCodeLoginResult>('/api/auth/qrcode_login', {
+      method: 'POST',
+      body: input,
+      signal,
       retryUnauthorized: false,
     })
   },

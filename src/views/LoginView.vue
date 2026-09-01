@@ -1,27 +1,45 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCheckbox, NIcon, NInput, NSwitch, useMessage } from 'naive-ui'
+import { NButton, NCheckbox, NIcon, NInput, NQrCode, NSpin, NSwitch, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
   LayersOutline,
   LockClosedOutline,
   MoonOutline,
+  OpenOutline,
   PersonOutline,
+  QrCodeOutline,
+  RefreshOutline,
   ShieldCheckmarkOutline,
   SunnyOutline,
 } from '@vicons/ionicons5'
 import { authApi } from '../api/auth'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
 import { getApiErrorMessage } from '../api/client'
+import type { QRCodeLoginStatus } from '../api/types'
 import { useSession } from '../state/session'
 import { useTheme } from '../state/theme'
+
+type LoginMethod = 'qrcode' | 'password'
+type QRCodeState = 'loading' | 'waiting' | 'expired' | 'error'
+
+const QR_POLL_INTERVAL_MS = 1_500
+const QR_STATUS_TEXT: Record<QRCodeLoginStatus, string> = {
+  '0': '等待使用企业微信扫码…',
+  '1': '已确认，正在完成登录…',
+  '2': '已扫码，请在手机上确认登录…',
+  '3': '二维码已过期，请刷新后重试',
+}
+const isMobileUserAgent = typeof navigator !== 'undefined'
+  && /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent)
 
 const router = useRouter()
 const message = useMessage()
 const { clearSession, setDisplayName } = useSession()
 const { isDark, toggleTheme } = useTheme()
+const loginMethod = ref<LoginMethod>('password')
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -29,6 +47,12 @@ const submitting = ref(false)
 const checkingSession = ref(true)
 const privacyVisible = ref(false)
 const privacyAccepted = ref(false)
+const qrCodeUrl = ref('')
+const qrCodeState = ref<QRCodeState>('loading')
+const qrStatusText = ref('正在获取登录二维码…')
+const clearSavedPassword = ref(false)
+
+let qrFlowController: AbortController | null = null
 
 async function checkSession() {
   try {
@@ -43,15 +67,18 @@ async function checkSession() {
   }
 }
 
+function requirePrivacyAcceptance() {
+  if (privacyAccepted.value) return true
+  message.warning('请先阅读并确认隐私说明')
+  return false
+}
+
 async function submitLogin() {
   if (!account.value.trim() || !password.value) {
     message.warning('请输入学号和密码')
     return
   }
-  if (!privacyAccepted.value) {
-    message.warning('请先阅读并确认隐私说明')
-    return
-  }
+  if (!requirePrivacyAcceptance()) return
 
   submitting.value = true
   try {
@@ -69,7 +96,106 @@ async function submitLogin() {
   }
 }
 
+function cancelQRCodeFlow() {
+  qrFlowController?.abort()
+  qrFlowController = null
+}
+
+function updateQRCodeStatus(status: QRCodeLoginStatus) {
+  const expired = status === '3'
+  qrCodeState.value = expired ? 'expired' : 'waiting'
+  qrStatusText.value = QR_STATUS_TEXT[status]
+  return !expired
+}
+
+function showQRCodeError(error: unknown, fallback: string) {
+  qrCodeState.value = 'error'
+  qrStatusText.value = getApiErrorMessage(error, fallback)
+}
+
+function waitForNextQRCodeCheck(signal: AbortSignal) {
+  return new Promise<boolean>((resolve) => {
+    if (signal.aborted) {
+      resolve(false)
+      return
+    }
+
+    const finish = (active: boolean) => {
+      window.clearTimeout(timer)
+      signal.removeEventListener('abort', handleAbort)
+      resolve(active)
+    }
+    const handleAbort = () => finish(false)
+    const timer = window.setTimeout(() => finish(true), QR_POLL_INTERVAL_MS)
+    signal.addEventListener('abort', handleAbort, { once: true })
+  })
+}
+
+async function pollQRCodeLogin(sessionId: string, signal: AbortSignal) {
+  while (!signal.aborted) {
+    try {
+      const result = await authApi.loginWithQRCode({
+        qrlogin_session_id: sessionId,
+        clear_password: clearSavedPassword.value,
+      }, signal)
+
+      if (signal.aborted) return
+      if ('detail' in result) {
+        if (!updateQRCodeStatus(result.detail)) return
+        if (!await waitForNextQRCodeCheck(signal)) return
+        continue
+      }
+
+      setDisplayName(result.name)
+      message.success('扫码登录成功')
+      await router.replace('/home')
+      return
+    } catch (error) {
+      if (signal.aborted) return
+      showQRCodeError(error, '扫码登录失败，请重新获取二维码')
+      return
+    }
+  }
+}
+
+async function loadQRCode() {
+  cancelQRCodeFlow()
+  const flowController = new AbortController()
+  qrFlowController = flowController
+  qrCodeUrl.value = ''
+  qrCodeState.value = 'loading'
+  qrStatusText.value = '正在获取登录二维码…'
+
+  try {
+    const result = await authApi.getLoginQRCode(flowController.signal)
+    if (flowController.signal.aborted) return
+
+    qrCodeUrl.value = result.qrcode_url
+    qrCodeState.value = 'waiting'
+    qrStatusText.value = QR_STATUS_TEXT['0']
+    await pollQRCodeLogin(result.session_id, flowController.signal)
+  } catch (error) {
+    if (flowController.signal.aborted) return
+    showQRCodeError(error, '二维码获取失败，请稍后重试')
+  } finally {
+    if (qrFlowController === flowController) qrFlowController = null
+  }
+}
+
+function selectLoginMethod(method: LoginMethod) {
+  if (loginMethod.value === method) return
+  if (method === 'qrcode' && !requirePrivacyAcceptance()) return
+
+  if (method === 'password') cancelQRCodeFlow()
+  loginMethod.value = method
+
+  if (method === 'qrcode') {
+    void loadQRCode()
+  }
+}
+
 onMounted(checkSession)
+onBeforeUnmount(() => cancelQRCodeFlow())
 </script>
 
 <template>
@@ -101,10 +227,96 @@ onMounted(checkSession)
       <section class="login-card">
         <div class="login-card-heading">
           <h1>统一认证登录</h1>
-          <p>首次使用，请务必仔细阅读隐私政策。</p>
+          <p>{{ loginMethod === 'qrcode' ? '请使用企业微信扫码，并在手机上确认登录。' : '使用统一认证码和密码完成登录。' }}</p>
         </div>
 
-        <form @submit.prevent="submitLogin">
+        <div class="login-method-tabs" role="tablist" aria-label="登录方式">
+          <button
+            id="password-login-tab"
+            type="button"
+            role="tab"
+            :aria-selected="loginMethod === 'password'"
+            :class="{ active: loginMethod === 'password' }"
+            @click="selectLoginMethod('password')"
+          >
+            <NIcon :size="18"><LockClosedOutline /></NIcon>
+            密码登录
+          </button>
+          <button
+            id="qrcode-login-tab"
+            type="button"
+            role="tab"
+            :aria-selected="loginMethod === 'qrcode'"
+            :class="{ active: loginMethod === 'qrcode' }"
+            :disabled="checkingSession"
+            :title="!privacyAccepted ? '请先确认隐私政策' : undefined"
+            @click="selectLoginMethod('qrcode')"
+          >
+            <NIcon :size="18"><QrCodeOutline /></NIcon>
+            扫码登录
+          </button>
+        </div>
+
+        <div
+          v-if="loginMethod === 'qrcode'"
+          class="qrcode-login"
+          role="tabpanel"
+          aria-labelledby="qrcode-login-tab"
+        >
+          <div class="qrcode-password-option">
+            <NCheckbox v-model:checked="clearSavedPassword">
+              扫码登录后清除已保存的统一认证密码
+            </NCheckbox>
+            <p>仅清除本平台保存的密码，不会修改统一认证密码；后续登录态失效时需重新登录。</p>
+          </div>
+
+          <div class="qrcode-stage">
+            <NSpin v-if="qrCodeState === 'loading'" size="large" />
+            <NQrCode
+              v-else-if="qrCodeUrl"
+              :value="qrCodeUrl"
+              :size="218"
+              :padding="12"
+              error-correction-level="H"
+              color="#101828"
+              background-color="#ffffff"
+            />
+            <NIcon v-else :size="70"><QrCodeOutline /></NIcon>
+
+            <div
+              v-if="qrCodeState === 'expired' || qrCodeState === 'error'"
+              class="qrcode-retry-overlay"
+            >
+              <button type="button" class="qrcode-refresh-button" @click="loadQRCode">
+                <NIcon :size="25"><RefreshOutline /></NIcon>
+                <span>刷新二维码</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="qrcode-status" :class="`is-${qrCodeState}`" aria-live="polite">
+            <span class="status-dot" />
+            {{ qrStatusText }}
+          </div>
+
+          <a
+            v-if="qrCodeState === 'waiting' && isMobileUserAgent"
+            class="qrcode-device-link"
+            :href="qrCodeUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <NIcon><OpenOutline /></NIcon>
+            当前设备打开
+          </a>
+        </div>
+
+        <form
+          v-else
+          role="tabpanel"
+          aria-labelledby="password-login-tab"
+          @submit.prevent="submitLogin"
+        >
           <NInput v-model:value="account" size="large" placeholder="统一认证码" aria-label="统一认证码" autocomplete="username">
             <template #prefix><NIcon :size="25"><PersonOutline /></NIcon></template>
           </NInput>
@@ -124,7 +336,9 @@ onMounted(checkSession)
             </template>
           </NInput>
           <div class="privacy-consent">
-            <NCheckbox v-model:checked="privacyAccepted">我已知晓</NCheckbox>
+            <NCheckbox v-model:checked="privacyAccepted">
+              我已知晓
+            </NCheckbox>
             <button type="button" @click="privacyVisible = true">《隐私政策》</button>
           </div>
           <NButton
@@ -232,7 +446,7 @@ onMounted(checkSession)
 }
 
 .login-card-heading {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 .login-card h1 {
@@ -251,6 +465,194 @@ onMounted(checkSession)
 .login-card form {
   display: grid;
   gap: 15px;
+}
+
+.login-method-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin-bottom: 24px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.login-method-tabs button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--text-tertiary);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.login-method-tabs button:not(:disabled):hover {
+  color: var(--text-strong);
+}
+
+.login-method-tabs button:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.login-method-tabs button.active {
+  color: var(--primary-text);
+  background: var(--surface-elevated);
+  box-shadow: 0 2px 9px rgba(18, 36, 64, 0.09);
+}
+
+.qrcode-login {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+}
+
+.qrcode-password-option {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-soft);
+}
+
+.qrcode-password-option :deep(.n-checkbox__label) {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.qrcode-password-option p {
+  margin: 6px 0 0 25px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.qrcode-stage {
+  position: relative;
+  width: 244px;
+  height: 244px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  color: var(--text-disabled);
+  background:
+    linear-gradient(45deg, var(--surface-soft) 25%, transparent 25%) 0 0 / 18px 18px,
+    linear-gradient(-45deg, var(--surface-soft) 25%, transparent 25%) 0 9px / 18px 18px,
+    var(--surface-subtle);
+}
+
+.qrcode-stage :deep(canvas) {
+  display: block;
+  border-radius: 10px;
+}
+
+.qrcode-stage :deep(.n-qr-code) {
+  box-sizing: content-box;
+}
+
+.qrcode-retry-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--surface-card) 78%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.qrcode-refresh-button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 28%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.qrcode-refresh-button:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--primary) 36%, transparent);
+  transform: translateY(-1px);
+}
+
+.qrcode-refresh-button:active {
+  transform: translateY(0);
+}
+
+.qrcode-status {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.qrcode-status.is-loading .status-dot,
+.qrcode-status.is-waiting .status-dot {
+  background: var(--primary);
+  box-shadow: 0 0 0 5px var(--focus-ring);
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+.qrcode-status.is-expired,
+.qrcode-status.is-error {
+  color: var(--danger-text);
+}
+
+.qrcode-status.is-expired .status-dot,
+.qrcode-status.is-error .status-dot {
+  background: var(--danger-text);
+}
+
+.qrcode-device-link {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.qrcode-device-link:hover {
+  text-decoration: underline;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
 }
 
 .login-card form :deep(.n-input) {
@@ -384,15 +786,18 @@ onMounted(checkSession)
     font-size: 27px;
   }
 
-  .login-card-heading p {
-    font-size: 14px;
-  }
-
   .login-card form :deep(.n-input),
   .login-card form :deep(.n-button) {
     --n-height: 54px !important;
     min-height: 54px;
     height: 54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qrcode-status.is-loading .status-dot,
+  .qrcode-status.is-waiting .status-dot {
+    animation: none;
   }
 }
 </style>

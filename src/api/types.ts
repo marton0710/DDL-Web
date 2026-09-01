@@ -10,6 +10,24 @@ export interface LoginResult {
   name: string
 }
 
+export interface LoginQRCodeResult {
+  qrcode_url: string
+  session_id: string
+}
+
+export interface QRCodeLoginInput {
+  qrlogin_session_id: string
+  clear_password: boolean
+}
+
+export type QRCodeLoginStatus = '0' | '1' | '2' | '3'
+
+export interface QRCodeLoginStatusResult {
+  detail: QRCodeLoginStatus
+}
+
+export type QRCodeLoginResult = LoginResult | QRCodeLoginStatusResult
+
 export type QqPushStrategy = 'scheduled' | 'realtime'
 
 export interface QqPushConfig {
