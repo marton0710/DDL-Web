@@ -65,8 +65,8 @@ const userInfo = reactive<CurrentUser>({
   meetschedule_config: null,
 })
 
-const QQ_BOT_NUMBER = '4014491707'
-const QQ_BOT_JOIN_URL = 'https://qun.qq.com/qunpro/robot/qunshare?robot_appid=1905400907&robot_uin=4014491707&biz_type=0&jumpsource=shorturl'
+const QQ_BOT_NUMBER = '3483498155'
+const QQ_BOT_JOIN_URL = 'https://qm.qq.com/q/V1z9XRqlau'
 const canOpenQqBotDirectly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 const DEFAULT_REMINDER_TIME = '07:00'
 
@@ -590,9 +590,9 @@ onMounted(async () => {
                   :href="canOpenQqBotDirectly ? QQ_BOT_JOIN_URL : undefined"
                   :target="canOpenQqBotDirectly ? '_blank' : undefined"
                   :rel="canOpenQqBotDirectly ? 'noopener noreferrer' : undefined"
-                  :aria-label="canOpenQqBotDirectly ? '打开 QQ 添加聚合截止线机器人' : undefined"
+                  :aria-label="canOpenQqBotDirectly ? '打开 QQ 添加好友' : undefined"
                 >
-                  <img src="/assets/qqbot-1905400907.png" alt="聚合截止线 QQ机器人二维码" />
+                  <img src="/assets/qqbot-3483498155.png" alt="x_shine QQ 好友二维码" />
                 </a>
                 <small>{{ canOpenQqBotDirectly ? '使用手机 QQ 扫一扫，或点击二维码直接添加好友' : '请使用手机 QQ 扫一扫并添加' }}</small>
               </article>
@@ -617,10 +617,10 @@ onMounted(async () => {
           <li>
             <header class="binding-guide-step-heading">
               <b>2</b>
-              <div><strong>获取绑定码</strong><span>发送指令或使用聊天窗口快捷菜单</span></div>
+              <div><strong>获取绑定码</strong><span>向新账号发送注册指令</span></div>
             </header>
             <div class="bot-help-command">
-              <span>任选一种方式：向机器人发送 <code>/register</code>，或点击快捷菜单中的 <strong class="bot-menu-action">获取绑定码</strong>。</span>
+              <span>添加好友后，向该账号发送 <code>/register</code> 获取绑定码。</span>
             </div>
           </li>
           <li>
@@ -820,7 +820,6 @@ onMounted(async () => {
 .bot-number-copy button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--primary-border); border-radius: 8px; padding: 6px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 10px; font-weight: 700; cursor: pointer; }
 .bot-help-command { margin: 12px 0 0 36px; }
 .bot-help-command code { border-radius: 8px; padding: 6px 10px; color: var(--primary-soft-text); background: var(--primary-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 750; user-select: all; }
-.bot-menu-action { display: inline-block; border-radius: 7px; padding: 4px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 11px; font-weight: 750; white-space: nowrap; }
 .bot-help-command span,
 .binding-guide-step-copy { color: var(--text-secondary); font-size: 10px; line-height: 1.65; }
 .binding-guide-step-copy { margin: 9px 0 0 36px; }
