@@ -99,6 +99,14 @@ function compareDeadlines(left: Homework, right: Homework): number {
 function compareHomeworks(left: Homework, right: Homework, now: number): number {
   const groupDifference = homeworkSortGroup(left, now) - homeworkSortGroup(right, now)
   if (groupDifference !== 0) return groupDifference
+  if (left.done && right.done) {
+    const leftTimestamp = getDeadlineTimestamp(left)
+    const rightTimestamp = getDeadlineTimestamp(right)
+    if (leftTimestamp === Number.MAX_SAFE_INTEGER || rightTimestamp === Number.MAX_SAFE_INTEGER) {
+      return leftTimestamp - rightTimestamp
+    }
+    return rightTimestamp - leftTimestamp
+  }
   return compareDeadlines(left, right)
 }
 

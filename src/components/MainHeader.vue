@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NDrawer, NDrawerContent, NIcon, NSwitch } from 'naive-ui'
+import { NIcon, NSwitch } from 'naive-ui'
 import {
   ClipboardOutline,
   InformationCircleOutline,
-  MenuOutline,
   MoonOutline,
   PersonOutline,
   SunnyOutline,
 } from '@vicons/ionicons5'
-import AccountActions from './AccountActions.vue'
 import { useSession } from '../state/session'
 import { useTheme } from '../state/theme'
 
 const { avatarText, displayName } = useSession()
 const { isDark, toggleTheme } = useTheme()
-const mobileOpen = ref(false)
 </script>
 
 <template>
@@ -48,41 +44,15 @@ const mobileOpen = ref(false)
           <span class="profile-name">{{ displayName || '个人中心' }}</span>
           <span class="avatar">{{ avatarText }}</span>
         </div>
-        <button class="mobile-menu-button" type="button" aria-label="打开导航" @click="mobileOpen = true">
-          <NIcon><MenuOutline /></NIcon>
-        </button>
       </div>
     </div>
   </header>
 
-  <NDrawer v-model:show="mobileOpen" placement="right" :width="282">
-    <NDrawerContent closable>
-      <template #header>
-        <div class="drawer-profile"><span>{{ avatarText }}</span><strong>{{ displayName || '个人中心' }}</strong></div>
-      </template>
-      <nav class="mobile-nav" aria-label="移动端导航">
-        <RouterLink to="/home" @click="mobileOpen = false"><NIcon><ClipboardOutline /></NIcon>作业</RouterLink>
-        <RouterLink to="/profile" @click="mobileOpen = false"><NIcon><PersonOutline /></NIcon>我的</RouterLink>
-        <RouterLink to="/about" @click="mobileOpen = false"><NIcon><InformationCircleOutline /></NIcon>关于项目</RouterLink>
-      </nav>
-      <div class="mobile-session-action">
-        <AccountActions
-          variant="mobile"
-          :username="displayName"
-          :show-deletion="false"
-        />
-      </div>
-      <template #footer>
-        <div class="mobile-delete-action">
-          <AccountActions
-            variant="mobile"
-            :username="displayName"
-            :show-logout="false"
-          />
-        </div>
-      </template>
-    </NDrawerContent>
-  </NDrawer>
+  <nav class="mobile-bottom-nav" aria-label="移动端主导航">
+    <RouterLink to="/home"><NIcon><ClipboardOutline /></NIcon><span>作业</span></RouterLink>
+    <RouterLink to="/profile"><NIcon><PersonOutline /></NIcon><span>我的</span></RouterLink>
+    <RouterLink to="/about"><NIcon><InformationCircleOutline /></NIcon><span>关于</span></RouterLink>
+  </nav>
 </template>
 
 <style scoped>
@@ -152,16 +122,7 @@ const mobileOpen = ref(false)
   box-shadow: 0 5px 12px rgba(23, 105, 232, 0.2);
 }
 
-.mobile-menu-button { display: none; border: 0; padding: 7px; color: var(--text-secondary); background: transparent; font-size: 25px; cursor: pointer; }
-.drawer-profile { display: flex; align-items: center; gap: 12px; }
-.drawer-profile > span { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: white; background: var(--primary); }
-.drawer-profile strong { color: var(--text-strong); font-size: 14px; }
-
-.mobile-nav { display: grid; gap: 7px; }
-.mobile-nav a { min-height: 44px; display: flex; align-items: center; gap: 9px; border-radius: 10px; padding: 0 13px; color: var(--text-secondary); font-size: 13px; font-weight: 650; }
-.mobile-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
-.mobile-session-action { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
-.mobile-delete-action { width: 100%; }
+.mobile-bottom-nav { display: none; }
 
 @media (max-width: 720px) {
   .site-header { height: 58px; }
@@ -170,6 +131,31 @@ const mobileOpen = ref(false)
   .desktop-nav,
   .profile-entry { display: none; }
   .theme-switch { gap: 5px; }
-  .mobile-menu-button { display: inline-flex; }
+  .mobile-bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--header-border);
+    padding: 6px max(12px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    background: var(--header-bg);
+    backdrop-filter: blur(18px);
+  }
+  .mobile-bottom-nav a {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 12px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .mobile-bottom-nav :deep(.n-icon) { font-size: 22px; }
+  .mobile-bottom-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
+  .mobile-bottom-nav a:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 }
 </style>

@@ -51,6 +51,8 @@ const qqReminderDialogOpen = ref(false)
 const qqBindingGuideOpen = ref(false)
 const qqBotNumberInput = ref<HTMLInputElement | null>(null)
 const meetScheduleDialogOpen = ref(false)
+const meetScheduleGuideOpen = ref(false)
+const meetScheduleGroupInput = ref<HTMLInputElement | null>(null)
 const qqReminderSaving = ref(false)
 const meetScheduleSaving = ref(false)
 
@@ -66,6 +68,7 @@ const userInfo = reactive<CurrentUser>({
 })
 
 const QQ_BOT_NUMBER = '3483498155'
+const MEET_SCHEDULE_GROUP = '1051832310'
 const QQ_BOT_JOIN_URL = 'https://qm.qq.com/q/V1z9XRqlau'
 const canOpenQqBotDirectly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 const DEFAULT_REMINDER_TIME = '07:00'
@@ -177,44 +180,39 @@ function openQqReminderSettings() {
   qqReminderDialogOpen.value = true
 }
 
-function selectQqBotNumber() {
-  const input = qqBotNumberInput.value
-  if (!input) return null
+function selectNumber(input: HTMLInputElement | null) {
+  if (!input) return
   input.focus({ preventScroll: true })
   input.select()
   input.setSelectionRange(0, input.value.length)
-  return input
 }
 
-async function copyQqBotNumber() {
-  if (window.isSecureContext && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(QQ_BOT_NUMBER)
-      message.success('机器人 QQ 号已复制')
-      return
-    } catch {
-      message.warning('复制失败，请长按 QQ 号手动复制')
-      return
+async function copyNumber(input: HTMLInputElement | null) {
+  let copied = false
+  if (input) {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(input.value)
+        copied = true
+      } catch {
+        // 剪贴板 API 不可用时，继续尝试兼容方式。
+      }
+    }
+    if (!copied) {
+      selectNumber(input)
+      try {
+        copied = document.execCommand('copy')
+      } catch {
+        // 保留选中的号码，便于手动复制。
+      }
+      if (copied) {
+        input.setSelectionRange(input.value.length, input.value.length)
+        input.blur()
+      }
     }
   }
-
-  const input = selectQqBotNumber()
-  if (!input) {
-    message.warning('无法选择 QQ 号，请刷新页面后重试')
-    return
-  }
-
-  let copied = false
-  try {
-    copied = document.execCommand('copy')
-  } catch {
-    // 由下方的手动复制提示统一处理。
-  }
-  input.setSelectionRange(input.value.length, input.value.length)
-  input.blur()
-
-  if (copied) message.success('机器人 QQ 号已复制')
-  else message.warning('复制失败，请长按 QQ 号手动复制')
+  if (copied) message.success('已复制')
+  else message.warning('复制失败，请手动选择进行复制')
 }
 
 async function saveQqReminderSettings() {
@@ -464,6 +462,9 @@ onMounted(async () => {
           </section>
         </div>
       </div>
+      <section class="mobile-account-actions" aria-label="账号操作">
+        <AccountActions :username="userInfo.name" />
+      </section>
     </main>
 
     <NModal
@@ -604,9 +605,9 @@ onMounted(async () => {
                     :value="QQ_BOT_NUMBER"
                     aria-label="机器人 QQ 号"
                     readonly
-                    @click="selectQqBotNumber"
+                    @click="selectNumber(qqBotNumberInput)"
                   />
-                  <button type="button" aria-label="复制机器人 QQ 号" @click="copyQqBotNumber">
+                  <button type="button" aria-label="复制机器人 QQ 号" @click="copyNumber(qqBotNumberInput)">
                     <NIcon><CopyOutline /></NIcon>复制
                   </button>
                 </div>
@@ -643,8 +644,14 @@ onMounted(async () => {
         <p class="dialog-description">
           {{ meetScheduleBindingKey
             ? '当前已绑定 Meet 课程表。如需更换同步密钥，请先解绑。'
-            : 'MeetSchedule Key 至少需要“读取课表、读取事件、写入事件”权限。绑定后，作业及完成状态会与 Meet 课程表同步。' }}
+            : '创建具备所需权限的 API，将密钥填入下方。绑定后，作业及完成状态会与 Meet 课程表同步。' }}
         </p>
+        <div class="binding-guide-entry meet-guide-entry">
+          <span><NIcon><HelpCircleOutline /></NIcon>还没有MeetSchedule Key？</span>
+          <button type="button" @click="meetScheduleGuideOpen = true">
+            查看绑定教程 <NIcon><ChevronForwardOutline /></NIcon>
+          </button>
+        </div>
         <NForm v-if="!meetScheduleBindingKey" label-placement="top">
           <NFormItem label="MeetSchedule Key">
             <NInput
@@ -662,6 +669,50 @@ onMounted(async () => {
             <NButton v-if="!meetScheduleBindingKey" type="primary" :loading="meetScheduleSaving" :disabled="!canSaveMeetSchedule" @click="saveMeetScheduleSettings">绑定</NButton>
           </div>
         </div>
+      </NCard>
+    </NModal>
+
+    <NModal v-model:show="meetScheduleGuideOpen" :mask-closable="false">
+      <NCard class="profile-dialog meet-binding-guide-dialog" title="Meet 课程表使用说明" :bordered="false" role="dialog" aria-modal="true">
+        <p class="binding-guide-intro">完成下面三步，即可连接 Meet 课程表。</p>
+        <ol class="binding-guide-steps">
+          <li>
+            <header class="binding-guide-step-heading">
+              <b>1</b>
+              <div><strong>下载 Meet 课程表</strong><span>访问官网获取下载方式</span></div>
+            </header>
+            <div class="meet-guide-copy">
+              <p>官网：<a href="https://meetschedule.top/" target="_blank" rel="noopener noreferrer">meetschedule.top <NIcon><ChevronForwardOutline /></NIcon></a></p>
+              <p>QQ 群：</p>
+              <div class="bot-number-copy meet-group-copy">
+                <input ref="meetScheduleGroupInput" :value="MEET_SCHEDULE_GROUP" aria-label="Meet 课程表 QQ 群号" readonly @click="selectNumber(meetScheduleGroupInput)" />
+                <button type="button" aria-label="复制 Meet 课程表 QQ 群号" @click="copyNumber(meetScheduleGroupInput)"><NIcon><CopyOutline /></NIcon>复制群号</button>
+              </div>
+            </div>
+          </li>
+          <li>
+            <header class="binding-guide-step-heading">
+              <b>2</b>
+              <div><strong>创建 API 并设置权限</strong><span>打开 App → 我的 → 开放平台 API → 创建 API</span></div>
+            </header>
+            <div class="meet-guide-copy">
+              <p>创建时必须包含以下全部权限：</p>
+              <ul class="meet-permission-list">
+                <li>读取课表</li>
+                <li>读取课程 / 事件 / 调停课 / 待办</li>
+                <li>新建 / 修改 / 删除课程 / 事件 / 调停课 / 待办</li>
+              </ul>
+            </div>
+          </li>
+          <li>
+            <header class="binding-guide-step-heading">
+              <b>3</b>
+              <div><strong>填写密钥并绑定</strong><span>返回设置窗口完成连接</span></div>
+            </header>
+            <p class="meet-guide-copy">复制创建的 API 密钥，关闭本教程，粘贴到“MeetSchedule Key”输入框并点击“绑定”。</p>
+          </li>
+        </ol>
+        <div class="dialog-actions"><NButton type="primary" @click="meetScheduleGuideOpen = false">我知道了</NButton></div>
       </NCard>
     </NModal>
 
@@ -794,8 +845,16 @@ onMounted(async () => {
 .dialog-actions.has-unbind { justify-content: space-between; }
 .dialog-primary-actions { display: flex; justify-content: flex-end; gap: 9px; }
 
-.qq-binding-guide-dialog { width: min(720px, calc(100vw - 28px)); }
-.qq-binding-guide-dialog .dialog-actions { margin-top: 18px; }
+.qq-binding-guide-dialog,
+.meet-binding-guide-dialog { width: min(720px, calc(100vw - 28px)); }
+.qq-binding-guide-dialog .dialog-actions,
+.meet-binding-guide-dialog .dialog-actions { margin-top: 18px; }
+.meet-guide-entry { margin-bottom: 18px; }
+.meet-guide-copy { margin: 12px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.8; }
+.meet-guide-copy p { margin: 8px 0; }
+.meet-guide-copy a { display: inline-flex; align-items: center; color: var(--primary-text); }
+.meet-permission-list { display: grid; gap: 6px; margin: 8px 0 0; padding-left: 20px; }
+.bot-number-copy.meet-group-copy { flex-wrap: wrap; justify-content: flex-start; margin: 12px 0; }
 .binding-guide-intro { margin: -3px 0 18px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
 .binding-guide-steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .binding-guide-steps > li { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--surface-subtle); }
@@ -832,7 +891,10 @@ onMounted(async () => {
   .identity-stats { grid-column: 1 / -1; }
 }
 
+.mobile-account-actions { display: none; }
+
 @media (max-width: 720px) {
+  .mobile-account-actions { display: block; margin-top: 24px; }
   .desktop-account-actions { display: none; }
 }
 

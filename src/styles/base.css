@@ -192,3 +192,11 @@ select:focus-visible {
     font-size: 19px;
   }
 }
+
+@media (max-width: 720px) {
+  .home-page,
+  .profile-page,
+  .about-page {
+    padding-bottom: calc(63px + env(safe-area-inset-bottom));
+  }
+}
