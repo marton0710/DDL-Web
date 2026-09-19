@@ -10,6 +10,8 @@ import {
   NInput,
   NInputNumber,
   NModal,
+  NRadioGroup,
+  NRadioButton,
   NTimePicker,
   useMessage,
 } from 'naive-ui'
@@ -17,13 +19,11 @@ import {
   ChatbubbleEllipsesOutline,
   ChevronForwardOutline,
   CopyOutline,
-  FlashOutline,
   HelpCircleOutline,
   InformationCircleOutline,
   KeyOutline,
   LayersOutline,
   QrCodeOutline,
-  TimeOutline,
 } from '@vicons/ionicons5'
 import AccountActions from '../components/AccountActions.vue'
 import MainHeader from '../components/MainHeader.vue'
@@ -439,20 +439,20 @@ onMounted(async () => {
           <section class="profile-card services-card">
             <header><div><span>偏好设置</span><h2>提醒与同步</h2><p>管理 QQ机器人提醒和课程表同步。</p></div></header>
             <div class="service-grid">
-              <button type="button" class="service-item" @click="openQqReminderSettings">
+              <div class="service-item">
                 <span class="service-icon key"><NIcon><KeyOutline /></NIcon></span>
                 <div>
                   <strong>QQ机器人提醒</strong>
                   <span>{{ userInfo.qqpush_config.qqchan_id || '未配置' }}</span>
                   <small v-if="qqReminderTimeSummary">{{ qqReminderTimeSummary }}</small>
                 </div>
-                <NIcon class="service-chevron"><ChevronForwardOutline /></NIcon>
-              </button>
-              <button type="button" class="service-item" @click="openMeetScheduleSettings">
+                <NButton size="small" @click="openQqReminderSettings">设置</NButton>
+              </div>
+              <div class="service-item">
                 <span class="service-icon layers"><NIcon><LayersOutline /></NIcon></span>
                 <div><strong>Meet 课程表</strong><span>{{ meetScheduleBindingKey || '未配置' }}</span></div>
-                <NIcon class="service-chevron"><ChevronForwardOutline /></NIcon>
-              </button>
+                <NButton size="small" @click="openMeetScheduleSettings">设置</NButton>
+              </div>
             </div>
           </section>
 
@@ -483,46 +483,19 @@ onMounted(async () => {
               />
               <div class="binding-guide-entry">
                 <span><NIcon><HelpCircleOutline /></NIcon>还没有绑定码？</span>
-                <button type="button" @click="qqBindingGuideOpen = true">
+                <NButton text type="primary" @click="qqBindingGuideOpen = true">
                   查看绑定教程 <NIcon><ChevronForwardOutline /></NIcon>
-                </button>
+                </NButton>
               </div>
             </div>
           </NFormItem>
           <div class="reminder-mode-field">
             <span class="reminder-field-label">提醒方式</span>
-            <div class="reminder-mode-switch" role="radiogroup" aria-label="提醒方式">
-              <button
-                type="button"
-                class="reminder-mode-option"
-                :class="{ active: qqReminderForm.mode === 'scheduled' }"
-                role="radio"
-                :aria-checked="qqReminderForm.mode === 'scheduled'"
-                @click="qqReminderForm.mode = 'scheduled'"
-              >
-                <span class="reminder-mode-icon"><NIcon><TimeOutline /></NIcon></span>
-                <span class="reminder-mode-copy">
-                  <strong>定时提醒</strong>
-                  <small>每天按指定时刻汇总推送</small>
-                </span>
-                <span class="reminder-mode-indicator" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                class="reminder-mode-option"
-                :class="{ active: qqReminderForm.mode === 'realtime' }"
-                role="radio"
-                :aria-checked="qqReminderForm.mode === 'realtime'"
-                @click="qqReminderForm.mode = 'realtime'"
-              >
-                <span class="reminder-mode-icon"><NIcon><FlashOutline /></NIcon></span>
-                <span class="reminder-mode-copy">
-                  <strong>实时提醒</strong>
-                  <small>在临期范围的作业推送提醒，可能存在延迟</small>
-                </span>
-                <span class="reminder-mode-indicator" aria-hidden="true" />
-              </button>
-            </div>
+            <NRadioGroup v-model:value="qqReminderForm.mode" name="reminder-mode" aria-label="提醒方式">
+              <NRadioButton value="scheduled">定时提醒</NRadioButton>
+              <NRadioButton value="realtime">实时提醒</NRadioButton>
+            </NRadioGroup>
+            <p class="reminder-mode-description">{{ qqReminderForm.mode === 'scheduled' ? '每天按指定时刻汇总推送' : '在临期范围的作业推送提醒，可能存在延迟' }}</p>
           </div>
           <div
             class="reminder-setting-grid"
@@ -531,7 +504,7 @@ onMounted(async () => {
             <NFormItem v-if="qqReminderForm.mode === 'scheduled'" label="推送时刻">
               <NTimePicker
                 :formatted-value="qqReminderForm.scheduledPushTime"
-                class="setting-control readonly-time-picker"
+                class="setting-control"
                 format="HH:mm"
                 value-format="HH:mm"
                 input-readonly
@@ -607,9 +580,9 @@ onMounted(async () => {
                     readonly
                     @click="selectNumber(qqBotNumberInput)"
                   />
-                  <button type="button" aria-label="复制机器人 QQ 号" @click="copyNumber(qqBotNumberInput)">
-                    <NIcon><CopyOutline /></NIcon>复制
-                  </button>
+                  <NButton size="small" secondary type="primary" aria-label="复制机器人 QQ 号" @click="copyNumber(qqBotNumberInput)">
+                    <template #icon><NIcon><CopyOutline /></NIcon></template>复制
+                  </NButton>
                 </div>
                 <small>在 QQ 中搜索账号并添加好友</small>
               </article>
@@ -648,9 +621,9 @@ onMounted(async () => {
         </p>
         <div class="binding-guide-entry meet-guide-entry">
           <span><NIcon><HelpCircleOutline /></NIcon>还没有MeetSchedule Key？</span>
-          <button type="button" @click="meetScheduleGuideOpen = true">
+          <NButton text type="primary" @click="meetScheduleGuideOpen = true">
             查看绑定教程 <NIcon><ChevronForwardOutline /></NIcon>
-          </button>
+          </NButton>
         </div>
         <NForm v-if="!meetScheduleBindingKey" label-placement="top">
           <NFormItem label="MeetSchedule Key">
@@ -686,7 +659,7 @@ onMounted(async () => {
               <p>QQ 群：</p>
               <div class="bot-number-copy meet-group-copy">
                 <input ref="meetScheduleGroupInput" :value="MEET_SCHEDULE_GROUP" aria-label="Meet 课程表 QQ 群号" readonly @click="selectNumber(meetScheduleGroupInput)" />
-                <button type="button" aria-label="复制 Meet 课程表 QQ 群号" @click="copyNumber(meetScheduleGroupInput)"><NIcon><CopyOutline /></NIcon>复制群号</button>
+                <NButton size="small" secondary type="primary" aria-label="复制 Meet 课程表 QQ 群号" @click="copyNumber(meetScheduleGroupInput)"><template #icon><NIcon><CopyOutline /></NIcon></template>复制群号</NButton>
               </div>
             </div>
           </li>
@@ -792,9 +765,7 @@ onMounted(async () => {
 
 .services-card > header { align-items: center; }
 .service-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-top: 18px; }
-.service-item { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 13px; padding: 13px; color: inherit; background: var(--surface-elevated); font: inherit; text-align: left; cursor: pointer; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
-.service-item:hover,
-.service-item:focus-visible { border-color: var(--primary-border); outline: none; box-shadow: var(--shadow); transform: translateY(-1px); }
+.service-item { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 13px; padding: 13px; color: inherit; background: var(--surface-elevated); font: inherit; text-align: left; }
 .service-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 17px; }
 .service-icon.key { color: var(--warning-text); background: var(--warning-container); }
 .service-icon.layers { color: var(--success-text); background: var(--success-container); }
@@ -802,7 +773,6 @@ onMounted(async () => {
 .service-item > div strong { color: var(--text-strong); font-size: 11px; }
 .service-item > div span { overflow: hidden; color: var(--text-tertiary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .service-item > div small { color: var(--text-secondary); font-size: 9px; line-height: 1.4; }
-.service-chevron { grid-column: 3; grid-row: 1; color: var(--text-tertiary); font-size: 16px; }
 
 .privacy-strip { display: flex; align-items: flex-start; gap: 13px; padding: 17px 19px; color: var(--text-secondary); box-shadow: none; }
 .privacy-strip :deep(.n-icon) { flex: 0 0 auto; color: var(--primary-text); font-size: 20px; }
@@ -810,37 +780,19 @@ onMounted(async () => {
 .privacy-strip strong { color: var(--text-strong); font-size: 12px; }
 .privacy-strip span { font-size: 10px; line-height: 1.65; }
 
-.profile-dialog { width: min(520px, calc(100vw - 28px)); border-radius: 16px; }
+.profile-dialog { width: min(520px, calc(100vw - 28px)); }
 .qq-reminder-dialog { width: min(680px, calc(100vw - 28px)); }
 .dialog-description { margin: -3px 0 18px; border-radius: 10px; padding: 11px 12px; color: var(--text-secondary); background: var(--surface-soft); font-size: 11px; line-height: 1.65; }
 .qq-binding-control { width: 100%; display: grid; gap: 8px; }
 .binding-guide-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-tertiary); font-size: 10px; }
 .binding-guide-entry > span { display: inline-flex; align-items: center; gap: 5px; }
 .binding-guide-entry > span :deep(.n-icon) { color: var(--primary-text); font-size: 14px; }
-.binding-guide-entry button { display: inline-flex; align-items: center; gap: 2px; border: 0; padding: 2px 0; color: var(--primary-text); background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; }
-.binding-guide-entry button :deep(.n-icon) { font-size: 13px; }
 .reminder-mode-field { margin-bottom: 20px; }
 .reminder-field-label { display: block; margin-bottom: 8px; color: var(--text-strong); font-size: 14px; font-weight: 500; }
-.reminder-mode-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.reminder-mode-option { min-width: 0; min-height: 72px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 1px solid var(--line-strong); border-radius: 13px; padding: 11px 13px; background: var(--surface-subtle); text-align: left; cursor: pointer; transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
-.reminder-mode-option:hover { border-color: var(--primary-border); background: var(--surface-hover); transform: translateY(-1px); }
-.reminder-mode-option.active { border-color: var(--primary-border); background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary-border); }
-.reminder-mode-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 11px; color: var(--text-tertiary); background: var(--surface-elevated); font-size: 19px; }
-.reminder-mode-option.active .reminder-mode-icon { color: var(--primary-text); background: var(--surface-card); }
-.reminder-mode-copy { min-width: 0; display: grid; gap: 3px; }
-.reminder-mode-copy strong { color: var(--text-strong); font-size: 13px; }
-.reminder-mode-copy small { overflow: hidden; color: var(--text-tertiary); font-size: 10px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
-.reminder-mode-option.active .reminder-mode-copy small { color: var(--text-secondary); }
-.reminder-mode-indicator { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--control-border); border-radius: 50%; }
-.reminder-mode-option.active .reminder-mode-indicator { border-color: var(--primary); background: var(--primary); box-shadow: inset 0 0 0 3px var(--primary-soft); }
 .reminder-setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .reminder-setting-grid.single-field { grid-template-columns: 1fr; }
 .reminder-setting-grid :deep(.n-form-item) { min-width: 0; }
 .setting-control { width: 100%; }
-.readonly-time-picker :deep(.n-input),
-.readonly-time-picker :deep(.n-input__input-el),
-.readonly-time-picker :deep(.n-input-wrapper) { cursor: pointer; }
-.readonly-time-picker :deep(.n-input__input-el) { caret-color: transparent; font-variant-numeric: tabular-nums; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
 .dialog-actions.has-unbind { justify-content: space-between; }
 .dialog-primary-actions { display: flex; justify-content: flex-end; gap: 9px; }
@@ -876,7 +828,6 @@ onMounted(async () => {
 .number-method { justify-content: center; }
 .bot-number-copy { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 24px 0 20px; }
 .bot-number-copy input { width: 154px; min-width: 0; border: 0; padding: 0; outline: 0; color: var(--text-strong); background: transparent; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 23px; font-weight: 750; letter-spacing: 1px; text-align: center; }
-.bot-number-copy button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--primary-border); border-radius: 8px; padding: 6px 8px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 10px; font-weight: 700; cursor: pointer; }
 .bot-help-command { margin: 12px 0 0 36px; }
 .bot-help-command code { border-radius: 8px; padding: 6px 10px; color: var(--primary-soft-text); background: var(--primary-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; font-weight: 750; user-select: all; }
 .bot-help-command span,
@@ -912,19 +863,17 @@ onMounted(async () => {
   .platform-copy > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .status-text { white-space: nowrap; }
   .platform-actions { min-width: 0; justify-self: end; }
-  .platform-actions :deep(.n-button) { min-height: 36px; padding: 0 11px; }
   .service-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
   .binding-guide-entry { align-items: flex-start; flex-direction: column; gap: 5px; }
   .bot-add-methods { grid-template-columns: 1fr; }
-  .reminder-mode-switch { grid-template-columns: 1fr; }
-  .reminder-mode-copy small { overflow: visible; text-overflow: clip; white-space: normal; }
   .reminder-setting-grid { grid-template-columns: 1fr; gap: 0; }
   .dialog-actions { display: block; }
   .dialog-actions.has-unbind { display: flex; align-items: stretch; flex-direction: column-reverse; gap: 10px; }
   .dialog-primary-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .dialog-actions :deep(.n-button) { width: 100%; }
 }
+
+.reminder-mode-description { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
 </style>

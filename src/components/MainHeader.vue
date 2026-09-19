@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { NIcon, NSwitch } from 'naive-ui'
+import { NIcon } from 'naive-ui'
 import {
   ClipboardOutline,
   InformationCircleOutline,
-  MoonOutline,
   PersonOutline,
-  SunnyOutline,
 } from '@vicons/ionicons5'
 import { useSession } from '../state/session'
 import { useTheme } from '../state/theme'
+import ThemeSelect from './ThemeSelect.vue'
 
 const { avatarText, displayName } = useSession()
-const { isDark, toggleTheme } = useTheme()
+const { isDark } = useTheme()
 </script>
 
 <template>
@@ -31,15 +30,7 @@ const { isDark, toggleTheme } = useTheme()
       </nav>
 
       <div class="header-actions">
-        <div class="theme-switch" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
-          <NIcon><SunnyOutline v-if="isDark" /><MoonOutline v-else /></NIcon>
-          <NSwitch
-            :value="isDark"
-            size="small"
-            :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
-            @update:value="toggleTheme"
-          />
-        </div>
+        <ThemeSelect />
         <div class="profile-entry" :aria-label="displayName ? `当前用户：${displayName}` : '当前用户'">
           <span class="profile-name">{{ displayName || '个人中心' }}</span>
           <span class="avatar">{{ avatarText }}</span>
@@ -105,7 +96,6 @@ const { isDark, toggleTheme } = useTheme()
 .desktop-nav a.router-link-active { color: var(--primary-soft-text); background: var(--primary-soft); }
 
 .header-actions { display: flex; align-items: center; gap: 12px; }
-.theme-switch { display: flex; align-items: center; gap: 7px; color: var(--text-tertiary); font-size: 17px; }
 .profile-entry { display: flex; align-items: center; gap: 10px; border-radius: 10px; padding: 5px 6px 5px 10px; }
 .profile-name { max-width: 110px; overflow: hidden; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .avatar {
@@ -130,7 +120,6 @@ const { isDark, toggleTheme } = useTheme()
   .brand img { width: 137px; height: 36px; }
   .desktop-nav,
   .profile-entry { display: none; }
-  .theme-switch { gap: 5px; }
   .mobile-bottom-nav {
     position: fixed;
     inset: auto 0 0;

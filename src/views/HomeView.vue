@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { NIcon, NInput, NSelect, NSpin, useMessage } from 'naive-ui'
+import { NButton, NPagination, NIcon, NInput, NSelect, NSpin, useMessage } from 'naive-ui'
 import {
   AlarmOutline,
   CalendarOutline,
   CheckmarkCircleOutline,
-  ChevronBackOutline,
-  ChevronForwardOutline,
   ClipboardOutline,
   OpenOutline,
   RefreshOutline,
@@ -135,11 +133,6 @@ const pagedHomeworks = computed(() => {
   const start = (page.value - 1) * pageSize
   return filteredHomeworks.value.slice(start, start + pageSize)
 })
-const visiblePages = computed(() => {
-  const start = Math.max(1, Math.min(page.value - 2, pageCount.value - 4))
-  const end = Math.min(pageCount.value, start + 4)
-  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
-})
 
 const priorityHomework = computed(() =>
   homeworks.value
@@ -246,10 +239,6 @@ function taskInputId(homework: Homework, index: number): string {
   return `task-${homework.id ?? `${page.value}-${index}`}`
 }
 
-function changePage(nextPage: number) {
-  page.value = Math.min(Math.max(nextPage, 1), pageCount.value)
-}
-
 function resetFilters() {
   taskFilter.value = 'all'
   platformFilter.value = 'all'
@@ -273,21 +262,23 @@ onMounted(loadHomeworks)
             还有 <strong>{{ statistics.pending }}</strong> 项待完成
             <template v-if="statistics.soon">，其中 <em>{{ statistics.soon }}</em> 项将在 24 小时内截止</template>
           </p>
-          <p v-else>当前没有待完成作业，可以稍微放松一下。</p>
+          <p v-else>当前没有待完成作业。</p>
         </div>
         <div class="heading-actions">
-          <button class="secondary-action" type="button" @click="calendarVisible = true">
-            <NIcon><CalendarOutline /></NIcon>日历视图
-          </button>
-          <button
-            class="primary-action"
-            type="button"
+          <NButton class="heading-action" size="large" @click="calendarVisible = true">
+            <template #icon><NIcon><CalendarOutline /></NIcon></template>日历视图
+          </NButton>
+          <NButton
+            class="heading-action"
+            type="primary"
+            size="large"
+            :loading="refreshing"
             :disabled="loading || refreshing"
             @click="refreshHomeworks"
           >
-            <NIcon :class="{ spinning: refreshing }"><RefreshOutline /></NIcon>
+            <template #icon><NIcon><RefreshOutline /></NIcon></template>
             {{ refreshing ? '正在刷新' : '刷新作业' }}
-          </button>
+          </NButton>
           <small>上次更新：{{ formatUpdatedAt(lastRefreshTime) }}</small>
         </div>
       </header>
@@ -308,8 +299,7 @@ onMounted(loadHomeworks)
               </p>
             </template>
             <template v-else>
-              <strong>暂无临近截止</strong>
-              <p>逾期或无截止期限的作业不会进入优先关注。</p>
+              <strong>暂无待截止作业</strong>
             </template>
           </div>
           <b v-if="priorityHomework" class="focus-remaining" :class="getHomeworkState(priorityHomework)">
@@ -335,14 +325,14 @@ onMounted(loadHomeworks)
           </header>
 
           <div class="task-toolbar">
-            <div class="status-tabs" role="tablist" aria-label="任务状态筛选">
-              <button type="button" :class="{ active: taskFilter === 'pending' }" @click="taskFilter = 'pending'">
+            <div class="status-tabs" role="group" aria-label="任务状态筛选">
+              <NButton :type="taskFilter === 'pending' ? 'primary' : 'default'" secondary :aria-pressed="taskFilter === 'pending'" @click="taskFilter = 'pending'">
                 待完成 <span>{{ statistics.pending }}</span>
-              </button>
-              <button type="button" :class="{ active: taskFilter === 'soon' }" @click="taskFilter = 'soon'">即将截止</button>
-              <button type="button" :class="{ active: taskFilter === 'overdue' }" @click="taskFilter = 'overdue'">已逾期</button>
-              <button type="button" :class="{ active: taskFilter === 'done' }" @click="taskFilter = 'done'">已完成</button>
-              <button type="button" :class="{ active: taskFilter === 'all' }" @click="taskFilter = 'all'">全部</button>
+              </NButton>
+              <NButton :type="taskFilter === 'soon' ? 'primary' : 'default'" secondary :aria-pressed="taskFilter === 'soon'" @click="taskFilter = 'soon'">即将截止</NButton>
+              <NButton :type="taskFilter === 'overdue' ? 'primary' : 'default'" secondary :aria-pressed="taskFilter === 'overdue'" @click="taskFilter = 'overdue'">已逾期</NButton>
+              <NButton :type="taskFilter === 'done' ? 'primary' : 'default'" secondary :aria-pressed="taskFilter === 'done'" @click="taskFilter = 'done'">已完成</NButton>
+              <NButton :type="taskFilter === 'all' ? 'primary' : 'default'" secondary :aria-pressed="taskFilter === 'all'" @click="taskFilter = 'all'">全部</NButton>
             </div>
             <div class="select-filters">
               <NSelect
@@ -389,8 +379,8 @@ onMounted(loadHomeworks)
                     <span class="empty-icon"><NIcon><ClipboardOutline /></NIcon></span>
                     <strong>{{ homeworks.length ? '没有符合条件的作业' : '还没有同步到作业' }}</strong>
                     <p>{{ homeworks.length ? '调整筛选条件后再看看。' : '先绑定学习平台，再点击右上角刷新作业。' }}</p>
-                    <button v-if="homeworks.length" type="button" @click="resetFilters">清除筛选</button>
-                    <button v-else type="button" @click="router.push('/profile')">去绑定平台</button>
+                    <NButton v-if="homeworks.length" type="primary" secondary size="small" @click="resetFilters">清除筛选</NButton>
+                    <NButton v-else type="primary" secondary size="small" @click="router.push('/profile')">去绑定平台</NButton>
                   </td>
                 </tr>
                 <tr v-for="(homework, index) in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
@@ -426,9 +416,9 @@ onMounted(loadHomeworks)
               <span class="empty-icon"><NIcon><ClipboardOutline /></NIcon></span>
               <strong>{{ homeworks.length ? '没有符合条件的作业' : '还没有同步到作业' }}</strong>
               <p>{{ homeworks.length ? '调整筛选条件后再看看。' : '先绑定学习平台，再刷新作业。' }}</p>
-              <button type="button" @click="homeworks.length ? resetFilters() : router.push('/profile')">
+              <NButton type="primary" secondary size="small" @click="homeworks.length ? resetFilters() : router.push('/profile')">
                 {{ homeworks.length ? '清除筛选' : '去绑定平台' }}
-              </button>
+              </NButton>
             </div>
             <article v-for="(homework, index) in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
               <div class="mobile-task-head">
@@ -456,11 +446,7 @@ onMounted(loadHomeworks)
 
           <footer v-if="filteredHomeworks.length" class="panel-footer">
             <span>第 {{ page }} / {{ pageCount }} 页</span>
-            <nav class="pagination" aria-label="作业分页">
-              <button type="button" :disabled="page === 1" aria-label="上一页" @click="changePage(page - 1)"><NIcon><ChevronBackOutline /></NIcon></button>
-              <button v-for="pageNumber in visiblePages" :key="pageNumber" type="button" :class="{ active: pageNumber === page }" @click="changePage(pageNumber)">{{ pageNumber }}</button>
-              <button type="button" :disabled="page === pageCount" aria-label="下一页" @click="changePage(page + 1)"><NIcon><ChevronForwardOutline /></NIcon></button>
-            </nav>
+            <NPagination v-model:page="page" class="pagination" :page-count="pageCount" :page-slot="5" size="small" aria-label="作业分页" />
           </footer>
         </section>
 
@@ -474,7 +460,7 @@ onMounted(loadHomeworks)
                 <i :class="getPlatformMeta(homework.platform).className" />
               </article>
             </div>
-            <div v-else class="side-empty"><NIcon><CheckmarkCircleOutline /></NIcon><strong>本周作业已清空</strong><span>没有即将截止的作业</span></div>
+            <div v-else class="side-empty"><NIcon><CheckmarkCircleOutline /></NIcon><strong>本周暂无待截止作业</strong></div>
           </section>
 
           <section class="side-card progress-card">
@@ -492,7 +478,7 @@ onMounted(loadHomeworks)
             <div v-else class="progress-empty">
               <span class="empty-icon"><NIcon><ClipboardOutline /></NIcon></span>
               <strong>暂无作业数据</strong>
-              <p>快去绑定平台刷新作业吧</p>
+              <p>绑定学习平台后，刷新即可同步作业</p>
             </div>
           </section>
         </aside>
@@ -554,35 +540,6 @@ onMounted(loadHomeworks)
   color: var(--text-tertiary);
   font-size: 12px;
 }
-
-.primary-action,
-.secondary-action {
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  padding: 0 17px;
-  color: var(--text-secondary);
-  background: var(--surface-elevated);
-  font-weight: 650;
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-
-.primary-action {
-  border-color: var(--primary);
-  color: white;
-  background: var(--primary);
-  box-shadow: 0 8px 18px rgba(23, 105, 232, 0.2);
-}
-
-.primary-action:hover { background: var(--primary-hover); transform: translateY(-1px); }
-.secondary-action:hover { border-color: var(--primary-border); color: var(--primary-text); background: var(--primary-soft); }
-.primary-action:disabled { opacity: 0.65; cursor: wait; transform: none; }
-.spinning { animation: spin 0.8s linear infinite; }
 
 .overview-grid {
   display: grid;
@@ -680,7 +637,6 @@ onMounted(loadHomeworks)
 .panel-heading h2 { margin: 0; color: var(--text-strong); font-size: 19px; }
 .panel-heading span { color: var(--text-tertiary); font-size: 12px; }
 .task-search { width: 250px; }
-.task-search :deep(.n-input-wrapper) { padding: 0 12px; }
 
 .task-toolbar {
   display: flex;
@@ -693,25 +649,11 @@ onMounted(loadHomeworks)
 }
 
 .status-tabs { display: flex; gap: 4px; }
-.status-tabs button {
-  min-height: 34px;
-  border: 0;
-  border-radius: 8px;
-  padding: 0 11px;
-  color: var(--text-secondary);
-  background: transparent;
-  font-size: 13px;
-  cursor: pointer;
-}
-.status-tabs button:hover { color: var(--primary-text); background: var(--primary-soft); }
-.status-tabs button.active { color: var(--primary-soft-text); background: var(--primary-soft); font-weight: 700; }
-.status-tabs button span { margin-left: 3px; }
 
 .select-filters { display: flex; gap: 8px; }
 .filter-select { flex: 0 0 auto; }
 .platform-filter { width: 150px; }
 .course-filter { width: 196px; }
-.select-filters :deep(.n-base-selection) { font-weight: 600; }
 
 .desktop-task-list { overflow-x: auto; }
 .desktop-task-list table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; }
@@ -771,8 +713,6 @@ onMounted(loadHomeworks)
 .empty-table > * { display: block; margin-left: auto; margin-right: auto; }
 .empty-table strong { margin-top: 12px; color: var(--text-strong); font-size: 15px; }
 .empty-table p { margin-top: 6px; margin-bottom: 14px; color: var(--text-tertiary); font-size: 12px; }
-.empty-table button,
-.mobile-empty button { border: 0; border-radius: 8px; padding: 8px 12px; color: var(--primary-soft-text); background: var(--primary-soft); font-size: 12px; font-weight: 700; cursor: pointer; }
 .empty-icon { width: 44px; height: 44px; display: inline-flex !important; align-items: center; justify-content: center; border-radius: 13px; color: var(--primary-text); background: var(--primary-soft); font-size: 23px; }
 
 .mobile-task-list { display: none; }
@@ -788,16 +728,12 @@ onMounted(loadHomeworks)
   font-size: 12px;
 }
 .pagination { display: flex; gap: 5px; }
-.pagination button { min-width: 31px; height: 31px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text-secondary); background: var(--surface-elevated); cursor: pointer; }
-.pagination button.active { border-color: var(--primary); color: white; background: var(--primary); }
-.pagination button:disabled { opacity: 0.38; cursor: default; }
 
 .side-column { display: grid; gap: 18px; }
 .side-card { overflow: hidden; padding: 18px; }
 .side-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .side-card header span { display: block; margin-bottom: 3px; color: var(--text-tertiary); font-size: 11px; font-weight: 650; text-transform: uppercase; }
 .side-card header h2 { margin: 0; color: var(--text-strong); font-size: 17px; }
-.side-card header button { border: 0; padding: 4px; color: var(--primary-text); background: transparent; font-size: 11px; cursor: pointer; }
 
 .upcoming-list { display: grid; margin-top: 14px; }
 .upcoming-list article { position: relative; display: grid; grid-template-columns: 58px minmax(0, 1fr) 5px; align-items: center; gap: 10px; min-height: 62px; border-top: 1px solid var(--line-soft); }
@@ -835,8 +771,6 @@ onMounted(loadHomeworks)
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-
 @media (max-width: 1120px) {
   .overview-grid { grid-template-columns: 1fr; }
   .workspace-grid { grid-template-columns: 1fr; }
@@ -851,7 +785,6 @@ onMounted(loadHomeworks)
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .task-toolbar { align-items: stretch; flex-direction: column; }
   .status-tabs { overflow-x: auto; padding-bottom: 2px; }
-  .status-tabs button { flex: 0 0 auto; }
   .filter-select { flex: 1; width: auto; }
   .desktop-task-list table { min-width: 720px; }
 }
@@ -861,8 +794,6 @@ onMounted(loadHomeworks)
   .workspace-heading { flex-direction: column; gap: 18px; }
   .workspace-heading h1 { font-size: 30px; }
   .heading-actions { width: 100%; }
-  .primary-action,
-  .secondary-action { width: 100%; padding: 0 12px; }
   .heading-actions small { justify-self: center; }
   .overview-grid { gap: 10px; }
   .focus-card { grid-template-columns: auto minmax(0, 1fr); padding: 16px; }
@@ -880,7 +811,6 @@ onMounted(loadHomeworks)
   .task-search { width: 100%; }
   .task-toolbar { padding: 10px 12px 12px; }
   .select-filters { display: grid; grid-template-columns: 1fr 1fr; }
-  .select-filters :deep(.n-base-selection) { --n-height: 44px !important; }
   .desktop-task-list { display: none; }
   .mobile-task-list { width: 100%; min-width: 0; display: grid; gap: 10px; overflow: hidden; padding: 12px; background: var(--mobile-list-bg); }
   .mobile-task-list article { width: 100%; min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 13px; padding: 14px; background: var(--surface-elevated); }
@@ -901,12 +831,12 @@ onMounted(loadHomeworks)
   .mobile-empty strong { margin-top: 12px; color: var(--text-secondary); font-size: 14px; }
   .mobile-empty p { margin: 6px 0 14px; }
   .panel-footer { padding: 10px 12px; }
-  .pagination button { min-width: 29px; height: 29px; }
 }
 
 @media (max-width: 390px) {
-  .status-tabs button { padding: 0 9px; }
   .panel-footer > span { display: none; }
   .pagination { width: 100%; justify-content: center; }
 }
+
+.heading-action { width: 100%; }
 </style>

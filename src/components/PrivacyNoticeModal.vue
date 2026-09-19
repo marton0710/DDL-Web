@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NIcon, NModal } from 'naive-ui'
+import { NButton, NIcon, NModal } from 'naive-ui'
 import { CloseOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
 import {
   PRIVACY_NOTICE_HIGHLIGHTS,
@@ -34,9 +34,9 @@ const emit = defineEmits<{
           <h2 id="privacy-notice-title">隐私说明</h2>
           <p>最后更新：{{ PRIVACY_NOTICE_UPDATED_AT }}</p>
         </div>
-        <button type="button" aria-label="关闭隐私说明" @click="emit('update:show', false)">
-          <NIcon><CloseOutline /></NIcon>
-        </button>
+        <NButton quaternary circle aria-label="关闭隐私说明" @click="emit('update:show', false)">
+          <template #icon><NIcon><CloseOutline /></NIcon></template>
+        </NButton>
       </header>
 
       <div class="privacy-content">
@@ -63,7 +63,7 @@ const emit = defineEmits<{
       </div>
 
       <footer>
-        <button type="button" @click="emit('update:show', false)">我知道了</button>
+        <NButton type="primary" @click="emit('update:show', false)">我知道了</NButton>
       </footer>
     </section>
   </NModal>
@@ -115,25 +115,6 @@ const emit = defineEmits<{
   margin: 3px 0 0;
   color: var(--text-tertiary);
   font-size: 11px;
-}
-
-.privacy-modal header button {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  background: var(--neutral-container);
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.privacy-modal header button:hover {
-  color: var(--text-strong);
-  background: var(--surface-hover);
 }
 
 .privacy-content {
@@ -243,21 +224,6 @@ const emit = defineEmits<{
   background: var(--surface);
 }
 
-.privacy-modal > footer button {
-  min-width: 96px;
-  height: 38px;
-  border: 0;
-  border-radius: 10px;
-  color: #fff;
-  background: var(--primary);
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.privacy-modal > footer button:hover {
-  background: var(--primary-deep);
-}
-
 @media (max-width: 520px) {
   .privacy-modal {
     width: calc(100vw - 20px);
@@ -284,10 +250,6 @@ const emit = defineEmits<{
 
   .privacy-modal > footer {
     padding: 12px 16px;
-  }
-
-  .privacy-modal > footer button {
-    width: 100%;
   }
 }
 </style>

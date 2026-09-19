@@ -1,13 +1,13 @@
-import { computed, ref } from 'vue'
+import { computed, readonly, ref } from 'vue'
 
 type ThemePreference = 'light' | 'dark' | 'system'
 type ResolvedTheme = Exclude<ThemePreference, 'system'>
 
 const STORAGE_KEY = 'ddl-theme-preference'
 const preference = ref<ThemePreference>('system')
+const readonlyPreference = readonly(preference)
 const systemPrefersDark = ref(false)
 let initialized = false
-let mediaQuery: MediaQueryList | null = null
 
 const resolvedTheme = computed<ResolvedTheme>(() => {
   if (preference.value !== 'system') return preference.value
@@ -43,7 +43,7 @@ function initializeTheme() {
   }
   if (isThemePreference(savedPreference)) preference.value = savedPreference
 
-  mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemPrefersDark.value = mediaQuery.matches
   mediaQuery.addEventListener('change', handleSystemThemeChange)
   applyTheme(resolvedTheme.value)
@@ -59,15 +59,12 @@ function setThemePreference(nextPreference: ThemePreference) {
   applyTheme(resolvedTheme.value)
 }
 
-function toggleTheme() {
-  setThemePreference(isDark.value ? 'light' : 'dark')
-}
-
 export function useTheme() {
   initializeTheme()
 
   return {
     isDark,
-    toggleTheme,
+    preference: readonlyPreference,
+    setThemePreference,
   }
 }

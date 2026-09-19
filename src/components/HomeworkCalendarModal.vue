@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { NIcon, NModal } from 'naive-ui'
+import { NButton, NIcon, NModal } from 'naive-ui'
 import {
   CalendarClearOutline,
   ChevronBackOutline,
@@ -155,19 +155,18 @@ function selectDay(day: CalendarDay) {
         <div>
           <span class="calendar-kicker"><NIcon><CalendarClearOutline /></NIcon> 作业日历</span>
           <h2 id="calendar-title">{{ monthLabel }}</h2>
-          <p>显示当前表格筛选条件下的 {{ datedHomeworks.length }} 项有截止时间的作业</p>
         </div>
         <div class="calendar-actions">
-          <button type="button" aria-label="上个月" @click="changeMonth(-1)">
-            <NIcon><ChevronBackOutline /></NIcon>
-          </button>
-          <button class="today-button" type="button" @click="goToToday">今天</button>
-          <button type="button" aria-label="下个月" @click="changeMonth(1)">
-            <NIcon><ChevronForwardOutline /></NIcon>
-          </button>
-          <button class="close-button" type="button" aria-label="关闭日历" @click="emit('update:show', false)">
-            <NIcon><CloseOutline /></NIcon>
-          </button>
+          <NButton quaternary circle aria-label="上个月" @click="changeMonth(-1)">
+            <template #icon><NIcon><ChevronBackOutline /></NIcon></template>
+          </NButton>
+          <NButton secondary @click="goToToday">今天</NButton>
+          <NButton quaternary circle aria-label="下个月" @click="changeMonth(1)">
+            <template #icon><NIcon><ChevronForwardOutline /></NIcon></template>
+          </NButton>
+          <NButton quaternary circle aria-label="关闭日历" @click="emit('update:show', false)">
+            <template #icon><NIcon><CloseOutline /></NIcon></template>
+          </NButton>
         </div>
       </header>
 
@@ -284,12 +283,6 @@ function selectDay(day: CalendarDay) {
   font-size: 25px;
 }
 
-.calendar-header p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
 .calendar-kicker {
   display: flex;
   align-items: center;
@@ -303,39 +296,6 @@ function selectDay(day: CalendarDay) {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.calendar-actions button {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--control-border);
-  border-radius: 9px;
-  color: var(--text-secondary);
-  background: var(--surface-elevated);
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-
-.calendar-actions button:hover,
-.calendar-actions button:focus-visible {
-  color: var(--primary-text);
-  border-color: var(--primary-text);
-  outline: none;
-}
-
-.calendar-actions .today-button {
-  width: auto;
-  padding: 0 14px;
-}
-
-.calendar-actions .close-button {
-  margin-left: 8px;
-  border-color: transparent;
-  background: transparent;
-  font-size: 20px;
 }
 
 .calendar-scroll {
@@ -573,27 +533,10 @@ function selectDay(day: CalendarDay) {
     font-size: 20px;
   }
 
-  .calendar-header p {
-    display: none;
-  }
-
   .calendar-actions {
     flex: 0 0 auto;
     margin-left: auto;
     gap: 4px;
-  }
-
-  .calendar-actions button {
-    width: 32px;
-    height: 32px;
-  }
-
-  .calendar-actions .today-button {
-    padding: 0 8px;
-  }
-
-  .calendar-actions .close-button {
-    margin-left: 0;
   }
 
   .calendar-scroll {

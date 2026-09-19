@@ -49,11 +49,11 @@ const privacyVisible = ref(false)
 
         <section class="privacy-section">
           <h2 class="section-title">数据与隐私</h2>
-          <button class="surface-card privacy-entry" type="button" @click="privacyVisible = true">
+          <div class="surface-card privacy-entry">
             <span class="privacy-entry-icon"><NIcon :size="27"><ShieldCheckmarkOutline /></NIcon></span>
             <span><strong>查看隐私政策</strong><small>了解系统处理的信息、使用目的、保存方式和您的控制选项。</small></span>
-            <em>查看详情</em>
-          </button>
+            <NButton @click="privacyVisible = true">查看详情</NButton>
+          </div>
         </section>
 
         <section class="surface-card project-card">
@@ -80,6 +80,10 @@ const privacyVisible = ref(false)
 </template>
 
 <style scoped>
+.about-page .surface-card {
+  border-radius: 4px;
+}
+
 .about-main {
   min-height: calc(100vh - 64px);
   padding: 0 0 48px;
@@ -186,14 +190,6 @@ const privacyVisible = ref(false)
   font: inherit;
   text-align: left;
   box-shadow: var(--shadow);
-  cursor: pointer;
-  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.privacy-entry:hover {
-  border-color: var(--primary-border);
-  transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(23, 105, 232, 0.08);
 }
 
 .privacy-entry-icon {
@@ -202,7 +198,7 @@ const privacyVisible = ref(false)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 13px;
+  border-radius: 4px;
   color: var(--primary);
   background: var(--primary-soft);
 }
@@ -224,13 +220,6 @@ const privacyVisible = ref(false)
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.privacy-entry em {
-  color: var(--primary);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 650;
 }
 
 .project-card {
@@ -262,10 +251,6 @@ const privacyVisible = ref(false)
   gap: 18px;
 }
 
-.project-actions :deep(.n-button) {
-  min-width: 260px;
-}
-
 @media (max-width: 900px) {
   .about-hero {
     grid-template-columns: 1fr;
@@ -292,10 +277,6 @@ const privacyVisible = ref(false)
 }
 
 @media (max-width: 520px) {
-  .about-main {
-    border-radius: 18px 18px 0 0;
-  }
-
   .about-hero h1 {
     font-size: 34px;
   }
@@ -324,10 +305,6 @@ const privacyVisible = ref(false)
     line-height: 1.55;
   }
 
-  .privacy-entry em {
-    grid-column: 2;
-  }
-
   .project-card {
     width: 100%;
     grid-template-columns: 1fr;
@@ -337,10 +314,6 @@ const privacyVisible = ref(false)
 
   .project-actions {
     display: grid;
-  }
-
-  .project-actions :deep(.n-button) {
-    min-width: 0;
   }
 }
 </style>

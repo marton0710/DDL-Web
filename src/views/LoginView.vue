@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCheckbox, NIcon, NInput, NQrCode, NSpin, NSwitch, useMessage } from 'naive-ui'
+import { NButton, NCheckbox, NIcon, NInput, NQrCode, NSpin, useMessage } from 'naive-ui'
 import {
   EyeOffOutline,
   EyeOutline,
   LayersOutline,
   LockClosedOutline,
-  MoonOutline,
   OpenOutline,
   PersonOutline,
   QrCodeOutline,
   RefreshOutline,
   ShieldCheckmarkOutline,
-  SunnyOutline,
 } from '@vicons/ionicons5'
 import { authApi } from '../api/auth'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
@@ -21,6 +19,7 @@ import { getApiErrorMessage } from '../api/client'
 import type { QRCodeLoginStatus } from '../api/types'
 import { useSession } from '../state/session'
 import { useTheme } from '../state/theme'
+import ThemeSelect from '../components/ThemeSelect.vue'
 
 type LoginMethod = 'qrcode' | 'password'
 type QRCodeState = 'loading' | 'waiting' | 'expired' | 'error'
@@ -38,7 +37,7 @@ const isMobileUserAgent = typeof navigator !== 'undefined'
 const router = useRouter()
 const message = useMessage()
 const { clearSession, setDisplayName } = useSession()
-const { isDark, toggleTheme } = useTheme()
+const { isDark } = useTheme()
 const loginMethod = ref<LoginMethod>('password')
 const account = ref('')
 const password = ref('')
@@ -207,15 +206,7 @@ onBeforeUnmount(() => cancelQRCodeFlow())
           alt="聚合截止线"
         />
       </RouterLink>
-      <div class="login-theme-switch" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
-        <NIcon><SunnyOutline v-if="isDark" /><MoonOutline v-else /></NIcon>
-        <NSwitch
-          :value="isDark"
-          size="small"
-          :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
-          @update:value="toggleTheme"
-        />
-      </div>
+      <ThemeSelect />
     </header>
 
     <main class="login-main">
@@ -231,30 +222,28 @@ onBeforeUnmount(() => cancelQRCodeFlow())
         </div>
 
         <div class="login-method-tabs" role="tablist" aria-label="登录方式">
-          <button
+          <NButton
             id="password-login-tab"
-            type="button"
             role="tab"
             :aria-selected="loginMethod === 'password'"
-            :class="{ active: loginMethod === 'password' }"
+            :type="loginMethod === 'password' ? 'primary' : 'default'" secondary
             @click="selectLoginMethod('password')"
           >
-            <NIcon :size="18"><LockClosedOutline /></NIcon>
+            <template #icon><NIcon :size="18"><LockClosedOutline /></NIcon></template>
             密码登录
-          </button>
-          <button
+          </NButton>
+          <NButton
             id="qrcode-login-tab"
-            type="button"
             role="tab"
             :aria-selected="loginMethod === 'qrcode'"
-            :class="{ active: loginMethod === 'qrcode' }"
+            :type="loginMethod === 'qrcode' ? 'primary' : 'default'" secondary
             :disabled="checkingSession"
             :title="!privacyAccepted ? '请先确认隐私政策' : undefined"
             @click="selectLoginMethod('qrcode')"
           >
-            <NIcon :size="18"><QrCodeOutline /></NIcon>
+            <template #icon><NIcon :size="18"><QrCodeOutline /></NIcon></template>
             扫码登录
-          </button>
+          </NButton>
         </div>
 
         <div
@@ -287,10 +276,10 @@ onBeforeUnmount(() => cancelQRCodeFlow())
               v-if="qrCodeState === 'expired' || qrCodeState === 'error'"
               class="qrcode-retry-overlay"
             >
-              <button type="button" class="qrcode-refresh-button" @click="loadQRCode">
-                <NIcon :size="25"><RefreshOutline /></NIcon>
+              <NButton type="primary" size="large" @click="loadQRCode">
+                <template #icon><NIcon :size="25"><RefreshOutline /></NIcon></template>
                 <span>刷新二维码</span>
-              </button>
+              </NButton>
             </div>
           </div>
 
@@ -330,16 +319,16 @@ onBeforeUnmount(() => cancelQRCodeFlow())
           >
             <template #prefix><NIcon :size="23"><LockClosedOutline /></NIcon></template>
             <template #suffix>
-              <button class="password-toggle" type="button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
-                <NIcon :size="23"><EyeOffOutline v-if="showPassword" /><EyeOutline v-else /></NIcon>
-              </button>
+              <NButton text :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
+                <template #icon><NIcon :size="23"><EyeOffOutline v-if="showPassword" /><EyeOutline v-else /></NIcon></template>
+              </NButton>
             </template>
           </NInput>
           <div class="privacy-consent">
             <NCheckbox v-model:checked="privacyAccepted">
               我已知晓
             </NCheckbox>
-            <button type="button" @click="privacyVisible = true">《隐私政策》</button>
+            <NButton text type="primary" @click="privacyVisible = true">《隐私政策》</NButton>
           </div>
           <NButton
             attr-type="submit"
@@ -391,14 +380,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
   display: block;
   height: 43px;
   width: auto;
-}
-
-.login-theme-switch {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text-tertiary);
-  font-size: 17px;
 }
 
 .login-main {
@@ -472,41 +453,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
   grid-template-columns: repeat(2, 1fr);
   gap: 5px;
   margin-bottom: 24px;
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
-}
-
-.login-method-tabs button {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 0;
-  border-radius: 9px;
-  color: var(--text-tertiary);
-  background: transparent;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.login-method-tabs button:not(:disabled):hover {
-  color: var(--text-strong);
-}
-
-.login-method-tabs button:disabled {
-  color: var(--text-disabled);
-  cursor: not-allowed;
-}
-
-.login-method-tabs button.active {
-  color: var(--primary-text);
-  background: var(--surface-elevated);
-  box-shadow: 0 2px 9px rgba(18, 36, 64, 0.09);
 }
 
 .qrcode-login {
@@ -521,12 +467,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--surface-soft);
-}
-
-.qrcode-password-option :deep(.n-checkbox__label) {
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .qrcode-password-option p {
@@ -553,15 +493,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
     var(--surface-subtle);
 }
 
-.qrcode-stage :deep(canvas) {
-  display: block;
-  border-radius: 10px;
-}
-
-.qrcode-stage :deep(.n-qr-code) {
-  box-sizing: content-box;
-}
-
 .qrcode-retry-overlay {
   position: absolute;
   inset: 0;
@@ -570,34 +501,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
   justify-content: center;
   background: color-mix(in srgb, var(--surface-card) 78%, transparent);
   backdrop-filter: blur(4px);
-}
-
-.qrcode-refresh-button {
-  min-height: 46px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
-  border-radius: 999px;
-  padding: 0 18px;
-  color: #fff;
-  background: var(--primary);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 28%, transparent);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.qrcode-refresh-button:hover {
-  background: var(--primary-hover);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--primary) 36%, transparent);
-  transform: translateY(-1px);
-}
-
-.qrcode-refresh-button:active {
-  transform: translateY(0);
 }
 
 .qrcode-status {
@@ -655,78 +558,12 @@ onBeforeUnmount(() => cancelQRCodeFlow())
   50% { opacity: 1; }
 }
 
-.login-card form :deep(.n-input) {
-  --n-height: 52px !important;
-  height: 52px;
-  min-height: 52px;
-  border-radius: 12px;
-  font-size: 15px;
-}
-
-.login-card form :deep(.n-input-wrapper) {
-  height: 100%;
-  align-items: center;
-}
-
-.login-card form :deep(.n-input__input),
-.login-card form :deep(.n-input__input-el) {
-  height: 100%;
-}
-
-.login-card form :deep(.n-input__prefix),
-.login-card form :deep(.n-input__suffix) {
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-}
-
-.login-card form :deep(.n-button) {
-  height: 50px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  background: var(--primary);
-}
-
-.password-toggle {
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  padding: 3px;
-  color: var(--text-tertiary);
-  background: transparent;
-  cursor: pointer;
-}
-
 .privacy-consent {
   display: flex;
   align-items: center;
   gap: 2px;
   color: var(--text-secondary);
   font-size: 12px;
-}
-
-.privacy-consent :deep(.n-checkbox__label) {
-  padding-right: 2px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.privacy-consent button {
-  border: 0;
-  padding: 2px;
-  color: var(--primary-text);
-  background: transparent;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.privacy-consent button:hover,
-.privacy-consent button:focus-visible {
-  outline: none;
-  text-decoration: underline;
 }
 
 .login-note {
@@ -784,13 +621,6 @@ onBeforeUnmount(() => cancelQRCodeFlow())
 
   .login-card h1 {
     font-size: 27px;
-  }
-
-  .login-card form :deep(.n-input),
-  .login-card form :deep(.n-button) {
-    --n-height: 54px !important;
-    min-height: 54px;
-    height: 54px;
   }
 }
 

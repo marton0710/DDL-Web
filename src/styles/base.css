@@ -136,9 +136,9 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
+button:not(.n-button):focus-visible,
+a:not(.n-button):focus-visible,
+input:not(.n-input__input-el):focus-visible,
 select:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;

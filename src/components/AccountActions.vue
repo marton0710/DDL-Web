@@ -9,11 +9,9 @@ import { useSession } from '../state/session'
 
 const props = withDefaults(defineProps<{
   username: string
-  variant?: 'desktop' | 'mobile'
   showLogout?: boolean
   showDeletion?: boolean
 }>(), {
-  variant: 'desktop',
   showLogout: true,
   showDeletion: true,
 })
@@ -100,15 +98,15 @@ onBeforeUnmount(clearCountdown)
 </script>
 
 <template>
-  <div class="account-actions" :class="{ mobile: props.variant === 'mobile' }">
-    <button v-if="props.showLogout" class="account-action logout" type="button" @click="logoutDialogOpen = true">
-      <NIcon><LogOutOutline /></NIcon>
+  <div class="account-actions">
+    <NButton v-if="props.showLogout" block size="large" @click="logoutDialogOpen = true">
+      <template #icon><NIcon><LogOutOutline /></NIcon></template>
       退出登录
-    </button>
-    <button v-if="props.showDeletion" class="account-action delete" type="button" @click="openDeletionDialog">
-      <NIcon><TrashOutline /></NIcon>
+    </NButton>
+    <NButton v-if="props.showDeletion" block size="large" type="error" secondary @click="openDeletionDialog">
+      <template #icon><NIcon><TrashOutline /></NIcon></template>
       注销账户
-    </button>
+    </NButton>
   </div>
 
   <NModal v-if="props.showLogout" v-model:show="logoutDialogOpen" :mask-closable="false">
@@ -172,64 +170,8 @@ onBeforeUnmount(clearCountdown)
   gap: 10px;
 }
 
-.account-action {
-  width: 100%;
-  height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  background: var(--surface-card);
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-  transition: 0.18s ease;
-}
-
-.account-action:hover,
-.account-action:focus-visible {
-  border-color: var(--control-border);
-  outline: none;
-  background: var(--surface-elevated);
-  box-shadow: var(--shadow);
-}
-
-.account-action.delete {
-  color: var(--danger-text);
-  border-color: var(--danger-border);
-  background: var(--danger-container-soft);
-}
-
-.account-action.delete:hover,
-.account-action.delete:focus-visible {
-  color: var(--danger-text);
-  border-color: var(--danger-text);
-  background: var(--danger-container);
-}
-
-.account-actions.mobile .account-action {
-  height: 44px;
-  justify-content: flex-start;
-  padding: 0 13px;
-  border-color: transparent;
-  border-radius: 10px;
-  box-shadow: none;
-}
-
-.account-actions.mobile .logout {
-  background: var(--surface-soft);
-}
-
-.account-actions.mobile .delete {
-  background: var(--danger-container-soft);
-}
-
 .account-dialog {
   width: min(480px, calc(100vw - 28px));
-  border-radius: 18px;
 }
 
 .account-dialog p {
@@ -306,17 +248,10 @@ onBeforeUnmount(clearCountdown)
 }
 
 @media (max-width: 520px) {
-  .account-dialog {
-    border-radius: 15px;
-  }
 
   .dialog-actions {
     grid-template-columns: 1fr 1fr;
     display: grid;
-  }
-
-  .dialog-actions :deep(.n-button) {
-    width: 100%;
   }
 }
 </style>
