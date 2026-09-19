@@ -215,28 +215,20 @@ async function refreshHomeworks() {
   }
 }
 
-async function changeCompletion(homework: Homework, event: Event) {
-  if (!homework.id) return
-  const checked = (event.target as HTMLInputElement).checked
-  const previous = homework.done
-  homework.done = checked
-  updatingHomeworkIds.value = new Set(updatingHomeworkIds.value).add(homework.id)
+async function changeCompletion(homework: Homework) {
+  if (!homework.id || updatingHomeworkIds.value.has(homework.id)) return
+  const completed = !homework.done
+  updatingHomeworkIds.value.add(homework.id)
 
   try {
-    await homeworkApi.setCompleted(homework.id, checked)
+    await homeworkApi.setCompleted(homework.id, completed)
+    homework.done = completed
   } catch (error) {
-    homework.done = previous
     if (await handleAuthenticationError(error)) return
     message.error(getApiErrorMessage(error, '更新完成状态失败'))
   } finally {
-    const nextIds = new Set(updatingHomeworkIds.value)
-    nextIds.delete(homework.id)
-    updatingHomeworkIds.value = nextIds
+    updatingHomeworkIds.value.delete(homework.id)
   }
-}
-
-function taskInputId(homework: Homework, index: number): string {
-  return `task-${homework.id ?? `${page.value}-${index}`}`
 }
 
 function resetFilters() {
@@ -345,8 +337,6 @@ onMounted(loadHomeworks)
                 v-model:value="courseFilter"
                 class="filter-select course-filter"
                 :options="courseSelectOptions"
-                filterable
-                clear-filter-after-select
                 aria-label="选择课程"
               />
             </div>
@@ -355,19 +345,19 @@ onMounted(loadHomeworks)
           <div class="desktop-task-list">
             <table>
               <colgroup>
-                <col class="task-col-check" />
                 <col class="task-col-title" />
                 <col class="task-col-platform" />
                 <col class="task-col-deadline" />
                 <col class="task-col-remaining" />
+                <col class="task-col-action" />
               </colgroup>
               <thead>
                 <tr>
-                  <th class="check-column"><span class="sr-only">完成状态</span></th>
                   <th>作业</th>
                   <th>平台</th>
                   <th>截止时间</th>
                   <th>剩余时间</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -383,18 +373,7 @@ onMounted(loadHomeworks)
                     <NButton v-else type="primary" secondary size="small" @click="router.push('/profile')">去绑定平台</NButton>
                   </td>
                 </tr>
-                <tr v-for="(homework, index) in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
-                  <td class="check-cell">
-                    <input
-                      :id="taskInputId(homework, index)"
-                      class="task-toggle"
-                      type="checkbox"
-                      :checked="homework.done"
-                      :disabled="!homework.id || updatingHomeworkIds.has(homework.id)"
-                      @change="changeCompletion(homework, $event)"
-                    />
-                    <label :for="taskInputId(homework, index)" aria-label="切换完成状态" />
-                  </td>
+                <tr v-for="homework in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
                   <td>
                     <div class="task-title-cell">
                       <a v-if="homework.url" :href="homework.url" target="_blank" rel="noopener noreferrer">{{ homework.title }}</a>
@@ -405,6 +384,18 @@ onMounted(loadHomeworks)
                   <td><span class="platform-chip" :class="getPlatformMeta(homework.platform).className"><i />{{ homework.platform }}</span></td>
                   <td><div class="deadline-cell"><strong>{{ formatDeadlineDate(homework.deadline) }}</strong><span>{{ formatTimelineTime(homework.deadline) }}</span></div></td>
                   <td><span class="remaining-chip" :class="getHomeworkState(homework)">{{ formatRemaining(homework) }}</span></td>
+                  <td>
+                    <NButton
+                      dashed
+                      size="small"
+                      :loading="!!homework.id && updatingHomeworkIds.has(homework.id)"
+                      :disabled="!homework.id || updatingHomeworkIds.has(homework.id)"
+                      :aria-label="`${homework.done ? '撤销完成' : '标记完成'}：${homework.title}`"
+                      @click="changeCompletion(homework)"
+                    >
+                      {{ homework.done ? '撤销完成' : '标记完成' }}
+                    </NButton>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -420,7 +411,7 @@ onMounted(loadHomeworks)
                 {{ homeworks.length ? '清除筛选' : '去绑定平台' }}
               </NButton>
             </div>
-            <article v-for="(homework, index) in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
+            <article v-for="homework in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
               <div class="mobile-task-head">
                 <span class="platform-chip" :class="getPlatformMeta(homework.platform).className"><i />{{ homework.platform }}</span>
                 <span class="remaining-chip" :class="getHomeworkState(homework)">{{ formatRemaining(homework) }}</span>
@@ -430,16 +421,16 @@ onMounted(loadHomeworks)
               <p>{{ homework.course_name || '未分类课程' }}</p>
               <footer>
                 <span><NIcon><TimeOutline /></NIcon>{{ formatDeadlineDate(homework.deadline) }} {{ formatTimelineTime(homework.deadline) }}</span>
-                <label>
-                  <input
-                    :id="`mobile-${taskInputId(homework, index)}`"
-                    type="checkbox"
-                    :checked="homework.done"
-                    :disabled="!homework.id || updatingHomeworkIds.has(homework.id)"
-                    @change="changeCompletion(homework, $event)"
-                  />
-                  <span>{{ homework.done ? '已完成' : '标记完成' }}</span>
-                </label>
+                <NButton
+                  dashed
+                  size="small"
+                  :loading="!!homework.id && updatingHomeworkIds.has(homework.id)"
+                  :disabled="!homework.id || updatingHomeworkIds.has(homework.id)"
+                  :aria-label="`${homework.done ? '撤销完成' : '标记完成'}：${homework.title}`"
+                  @click="changeCompletion(homework)"
+                >
+                  {{ homework.done ? '撤销完成' : '标记完成' }}
+                </NButton>
               </footer>
             </article>
           </div>
@@ -657,7 +648,7 @@ onMounted(loadHomeworks)
 
 .desktop-task-list { overflow-x: auto; }
 .desktop-task-list table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; }
-.desktop-task-list .task-col-check { width: 52px; }
+.desktop-task-list .task-col-action { width: 112px; }
 .desktop-task-list .task-col-platform { width: 112px; }
 .desktop-task-list .task-col-deadline { width: 130px; }
 .desktop-task-list .task-col-remaining { width: 172px; }
@@ -668,23 +659,6 @@ onMounted(loadHomeworks)
 .desktop-task-list tbody tr.completed { opacity: 0.6; }
 .desktop-task-list tbody tr.completed .task-title-cell a,
 .desktop-task-list tbody tr.completed .task-title-cell > strong { text-decoration: line-through; }
-.check-column { width: 52px; }
-
-.check-cell { text-align: center; }
-.task-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
-.check-cell label {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid var(--control-border);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.task-toggle:checked + label { border-color: var(--primary); background: var(--primary); }
-.task-toggle:checked + label::after { content: ''; width: 8px; height: 4px; margin-top: -2px; border: solid white; border-width: 0 0 2px 2px; transform: rotate(-45deg); }
-.task-toggle:disabled + label { opacity: 0.55; cursor: wait; }
 
 .task-title-cell { min-width: 0; display: grid; gap: 4px; }
 .task-title-cell a,
@@ -769,8 +743,6 @@ onMounted(loadHomeworks)
 .progress-empty > strong { margin-top: 10px; color: var(--text-secondary); font-size: 13px; }
 .progress-empty > p { margin: 5px 0 0; font-size: 11px; }
 
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-
 @media (max-width: 1120px) {
   .overview-grid { grid-template-columns: 1fr; }
   .workspace-grid { grid-template-columns: 1fr; }
@@ -823,8 +795,6 @@ onMounted(loadHomeworks)
   .mobile-task-list article > p { margin: 5px 0 13px; color: var(--text-tertiary); font-size: 11px; }
   .mobile-task-list article footer { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px 12px; border-top: 1px solid var(--line-soft); padding-top: 11px; }
   .mobile-task-list article footer > span { min-width: 0; display: flex; align-items: center; gap: 5px; color: var(--text-tertiary); font-size: 10px; overflow-wrap: anywhere; }
-  .mobile-task-list article footer label { flex: 0 0 auto; color: var(--primary-text); font-size: 11px; font-weight: 700; cursor: pointer; }
-  .mobile-task-list article footer input { margin-right: 5px; accent-color: var(--primary); }
   .mobile-loading,
   .mobile-empty { min-height: 230px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 12px; text-align: center; }
   .mobile-loading { flex-direction: row; gap: 8px; }
