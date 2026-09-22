@@ -54,7 +54,7 @@ async function createSubscription() {
     createdLinks.value[subscription.id] = getIcsFeedUrl(token)
     subscriptions.value.unshift(subscription)
     emit('changed')
-    message.success('订阅已创建，请复制链接')
+    await copySubscription(subscription.id)
   } catch (error) {
     emit('error', error, '创建 ICS 订阅失败')
   } finally {
@@ -107,10 +107,11 @@ watch(() => props.show, (show) => {
     :closable="!busy"
     content-scrollable
     @update:show="close"
+    @after-leave="createdLinks = {}"
   >
     <p class="ics-description">在日历中查看作业截止时间，也可以为不同设备分别创建订阅。</p>
-    <NAlert v-if="Object.keys(createdLinks).length" type="info" :show-icon="false" class="ics-notice">
-      离开或刷新前，请复制链接到日历的“通过 URL 订阅”。请勿分享链接。
+    <NAlert v-if="Object.keys(createdLinks).length" type="info" :show-icon="false" class="ics-notice" role="status">
+      关闭本弹窗后不能再次复制，请及时保存订阅链接。
     </NAlert>
 
     <div class="ics-toolbar">

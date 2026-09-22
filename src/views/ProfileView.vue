@@ -72,7 +72,7 @@ const userInfo = ref<CurrentUser>({
     qq_push_at: '07:00:00',
     qq_push_scope: 24,
   },
-  meetschedule_config: null,
+  is_bound_meetschedule: false,
 })
 
 const QQ_BOT_NUMBER = '3483498155'
@@ -116,7 +116,7 @@ const platformCredentials = reactive({ username: '', password: '' })
 
 const profileName = computed(() => userInfo.value.name || displayName.value || '同学')
 const connectedPlatformCount = computed(() => platforms.filter((item) => item.status === 'bound').length)
-const meetScheduleBound = computed(() => userInfo.value.meetschedule_config !== null)
+const meetScheduleBound = computed(() => userInfo.value.is_bound_meetschedule)
 const connectedServiceCount = computed(() => (
   Number(Boolean(userInfo.value.qqpush_config.qqchan_id))
   + Number(meetScheduleBound.value)
@@ -269,7 +269,7 @@ async function unbindMeetSchedule() {
   meetScheduleSaving.value = true
   try {
     await meetScheduleApi.unbind()
-    userInfo.value.meetschedule_config = null
+    userInfo.value.is_bound_meetschedule = false
     message.success('Meet 课程表解绑请求已提交')
   } catch (error) {
     if (await handleUnauthorized(error)) return
@@ -440,7 +440,7 @@ onMounted(async () => {
               <NGridItem>
                 <div class="service-item">
                   <span class="service-icon layers"><NIcon><LayersOutline /></NIcon></span>
-                  <div><strong>Meet 课程表</strong><span>{{ meetScheduleBound ? '已绑定 · ••••••' : '未配置' }}</span></div>
+                  <div><strong>Meet 课程表</strong><span>{{ meetScheduleBound ? '已接入' : '未接入' }}</span></div>
                   <InlineConfirmButton v-if="meetScheduleBound" label="解绑" confirm-label="确认解绑" subject="Meet 课程表" size="small" type="error" secondary :loading="meetScheduleSaving" @confirm="unbindMeetSchedule" />
                   <NButton v-else size="small" @click="openMeetScheduleSettings">设置</NButton>
                 </div>

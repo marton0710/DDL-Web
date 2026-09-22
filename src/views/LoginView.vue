@@ -493,6 +493,11 @@ onBeforeUnmount(() => cancelQRCodeFlow())
     var(--surface-subtle);
 }
 
+.qrcode-stage :deep(.n-qr-code) {
+  /* 二维码的 size 仅包含画布，内边距需额外占用空间。 */
+  box-sizing: content-box;
+}
+
 .qrcode-retry-overlay {
   position: absolute;
   inset: 0;

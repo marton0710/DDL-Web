@@ -45,7 +45,7 @@ export interface CurrentUser {
   name: string
   ics_url_count: number
   qqpush_config: QqPushConfig
-  meetschedule_config: MeetScheduleConfig | null
+  is_bound_meetschedule: boolean
 }
 
 export interface IcsSubscription {

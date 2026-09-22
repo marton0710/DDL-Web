@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { NButton, NIcon } from 'naive-ui'
 import {
   AlarmOutline,
@@ -10,8 +10,18 @@ import {
 } from '@vicons/ionicons5'
 import MainHeader from '../components/MainHeader.vue'
 import PrivacyNoticeModal from '../components/PrivacyNoticeModal.vue'
+import { systemApi } from '../api/system'
 
 const privacyVisible = ref(false)
+const version = ref('加载中…')
+
+onMounted(async () => {
+  try {
+    version.value = `v${await systemApi.getVersion()}`
+  } catch {
+    version.value = '暂时无法获取'
+  }
+})
 </script>
 
 <template>
@@ -56,7 +66,7 @@ const privacyVisible = ref(false)
         </section>
 
         <section class="surface-card project-card">
-          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网页版本</strong><span>v2.0.0</span></div>
+          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网站版本</strong><span>{{ version }}</span></div>
           <div class="project-actions">
             <NButton
               tag="a"
