@@ -1,5 +1,9 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 
+export function getApiUrl(path: string): string {
+  return `${apiBaseUrl}${path}`
+}
+
 interface RequestOptions extends Omit<RequestInit, 'body' | 'credentials'> {
   body?: unknown
 }
@@ -62,7 +66,7 @@ async function sendRequest<T>(path: string, options: RequestOptions): Promise<T>
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(getApiUrl(path), {
     ...requestInit,
     credentials: 'include',
     headers,

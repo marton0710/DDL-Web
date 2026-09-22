@@ -43,8 +43,20 @@ export interface MeetScheduleConfig {
 
 export interface CurrentUser {
   name: string
+  ics_url_count: number
   qqpush_config: QqPushConfig
   meetschedule_config: MeetScheduleConfig | null
+}
+
+export interface IcsSubscription {
+  id: string
+  created_at: string
+  fetch_count: number
+  last_fetched_at: string | null
+}
+
+export interface IcsSubscriptionCreated extends IcsSubscription {
+  token: string
 }
 
 export interface Homework {

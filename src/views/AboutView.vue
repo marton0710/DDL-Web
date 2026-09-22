@@ -42,22 +42,21 @@ const privacyVisible = ref(false)
             </article>
             <article class="surface-card feature-card">
               <span class="icon-circle feature-icon teal"><NIcon :size="30"><RefreshOutline /></NIcon></span>
-              <div><h3>同步扩展</h3><p>支持 QQ机器人提醒与 Meet 课程表同步。</p></div>
+              <div><h3>同步扩展</h3><p>支持 QQ机器人提醒、Meet 课程表同步，也可通过 ICS 订阅将作业截止时间加入常用日历。</p></div>
             </article>
           </div>
         </section>
 
         <section class="privacy-section">
           <h2 class="section-title">数据与隐私</h2>
-          <div class="surface-card privacy-entry">
+          <button type="button" class="surface-card privacy-entry" @click="privacyVisible = true">
             <span class="privacy-entry-icon"><NIcon :size="27"><ShieldCheckmarkOutline /></NIcon></span>
             <span><strong>查看隐私政策</strong><small>了解系统处理的信息、使用目的、保存方式和您的控制选项。</small></span>
-            <NButton @click="privacyVisible = true">查看详情</NButton>
-          </div>
+          </button>
         </section>
 
         <section class="surface-card project-card">
-          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网页版本</strong><span>v1.0.0</span></div>
+          <div class="version"><NIcon :size="27"><InformationCircleOutline /></NIcon><strong>网页版本</strong><span>v2.0.0</span></div>
           <div class="project-actions">
             <NButton
               tag="a"
@@ -181,15 +180,14 @@ const privacyVisible = ref(false)
   width: 100%;
   min-height: 90px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   margin-top: 14px;
   padding: 18px 22px;
   color: var(--text-secondary);
-  font: inherit;
   text-align: left;
-  box-shadow: var(--shadow);
+  cursor: pointer;
 }
 
 .privacy-entry-icon {
@@ -296,7 +294,6 @@ const privacyVisible = ref(false)
   }
 
   .privacy-entry {
-    grid-template-columns: auto minmax(0, 1fr);
     padding: 16px;
   }
 
@@ -312,8 +309,9 @@ const privacyVisible = ref(false)
     padding: 20px;
   }
 
+  .version,
   .project-actions {
-    display: grid;
+    justify-content: center;
   }
 }
 </style>

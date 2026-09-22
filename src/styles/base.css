@@ -6,8 +6,6 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --primary: #1769e8;
-  --primary-hover: #1b70ed;
-  --primary-deep: #0f5ed9;
   --primary-text: #1769e8;
   --primary-soft: #eaf2ff;
   --primary-soft-hover: #e1ecff;
@@ -22,7 +20,6 @@
   --line: rgba(31, 35, 43, 0.1);
   --line-soft: #edf0f5;
   --line-strong: #dbe2ec;
-  --control-border: #bcc8d8;
   --surface: #ffffff;
   --surface-card: rgba(255, 255, 255, 0.97);
   --surface-soft: #f4f7fb;
@@ -72,7 +69,6 @@
   --line: rgba(255, 255, 255, 0.08);
   --line-soft: rgba(255, 255, 255, 0.08);
   --line-strong: #3c4758;
-  --control-border: #5e6d82;
   --surface: #111720;
   --surface-card: rgba(17, 23, 32, 0.97);
   --surface-soft: #171e29;

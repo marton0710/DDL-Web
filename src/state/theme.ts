@@ -21,9 +21,7 @@ function isThemePreference(value: string | null): value is ThemePreference {
 }
 
 function applyTheme(theme: ResolvedTheme) {
-  const root = document.documentElement
-  root.dataset.theme = theme
-  root.style.colorScheme = theme
+  document.documentElement.dataset.theme = theme
 }
 
 function handleSystemThemeChange(event: MediaQueryListEvent) {

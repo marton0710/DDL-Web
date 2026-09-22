@@ -15,10 +15,11 @@ import {
 import MainHeader from '../components/MainHeader.vue'
 import HomeworkCalendarModal from '../components/HomeworkCalendarModal.vue'
 import { homeworkApi } from '../api/homework'
-import { getApiErrorMessage, isAuthenticationError } from '../api/client'
+import { getApiErrorMessage } from '../api/client'
 import type { Homework, HomeworkResponse, PlatformName } from '../api/types'
 import { getPlatformMeta, PLATFORM_META } from '../domain/platform'
-import { useSession } from '../state/session'
+import { useAuthenticationError } from '../composables/useAuthenticationError'
+import { useCurrentTime } from '../composables/useCurrentTime'
 import {
   formatDeadlineDate,
   formatRemaining,
@@ -34,7 +35,8 @@ type TaskFilter = 'pending' | 'soon' | 'overdue' | 'done' | 'all'
 
 const router = useRouter()
 const message = useMessage()
-const { clearSession } = useSession()
+const handleAuthenticationError = useAuthenticationError()
+const now = useCurrentTime()
 const taskFilter = ref<TaskFilter>('pending')
 const platformFilter = ref<'all' | PlatformName>('all')
 const courseFilter = ref('all')
@@ -48,11 +50,12 @@ const refreshing = ref(false)
 const updatingHomeworkIds = ref(new Set<string>())
 const calendarVisible = ref(false)
 
-const todayLabel = new Intl.DateTimeFormat('zh-CN', {
+const todayFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
   day: 'numeric',
   weekday: 'long',
-}).format(new Date())
+})
+const todayLabel = computed(() => todayFormatter.format(now.value))
 
 const platformSelectOptions = [
   { label: '全部平台', value: 'all' },
@@ -66,13 +69,24 @@ const courseSelectOptions = computed(() => [
     .map((course) => ({ label: course, value: course })),
 ])
 
-const statistics = computed(() => ({
-  all: homeworks.value.length,
-  pending: homeworks.value.filter((item) => !item.done).length,
-  soon: homeworks.value.filter((item) => getHomeworkState(item) === 'soon').length,
-  overdue: homeworks.value.filter((item) => getHomeworkState(item) === 'overdue').length,
-  done: homeworks.value.filter((item) => item.done).length,
-}))
+const statistics = computed(() => {
+  const counts = { all: homeworks.value.length, pending: 0, soon: 0, overdue: 0, done: 0 }
+  for (const homework of homeworks.value) {
+    if (homework.done) {
+      counts.done++
+    } else {
+      counts.pending++
+      const state = getHomeworkState(homework, now.value)
+      if (state === 'soon' || state === 'overdue') counts[state]++
+    }
+  }
+  return counts
+})
+
+const deadlineTimestamps = computed(() => new Map(homeworks.value.map((homework) => [
+  homework,
+  parseDeadline(homework.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER,
+])))
 
 const completionRate = computed(() => (
   statistics.value.all ? Math.round((statistics.value.done / statistics.value.all) * 100) : 0
@@ -87,7 +101,7 @@ function homeworkSortGroup(homework: Homework, now: number): number {
 }
 
 function getDeadlineTimestamp(homework: Homework): number {
-  return parseDeadline(homework.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
+  return deadlineTimestamps.value.get(homework)!
 }
 
 function compareDeadlines(left: Homework, right: Homework): number {
@@ -110,7 +124,6 @@ function compareHomeworks(left: Homework, right: Homework, now: number): number 
 
 const filteredHomeworks = computed(() => {
   const normalizedKeyword = keyword.value.trim().toLocaleLowerCase('zh-CN')
-  const now = Date.now()
 
   return homeworks.value
     .filter((homework) => {
@@ -123,9 +136,9 @@ const filteredHomeworks = computed(() => {
 
       if (taskFilter.value === 'pending') return !homework.done
       if (taskFilter.value === 'all') return true
-      return getHomeworkState(homework) === taskFilter.value
+      return getHomeworkState(homework, now.value) === taskFilter.value
     })
-    .sort((left, right) => compareHomeworks(left, right, now))
+    .sort((left, right) => compareHomeworks(left, right, now.value))
 })
 
 const pageCount = computed(() => Math.max(1, Math.ceil(filteredHomeworks.value.length / pageSize)))
@@ -138,8 +151,8 @@ const priorityHomework = computed(() =>
   homeworks.value
     .filter((item) => (
       !item.done
-      && parseDeadline(item.deadline) !== null
-      && getHomeworkState(item) !== 'overdue'
+      && getDeadlineTimestamp(item) !== Number.MAX_SAFE_INTEGER
+      && getHomeworkState(item, now.value) !== 'overdue'
     ))
     .sort(compareDeadlines)[0] ?? null,
 )
@@ -148,8 +161,8 @@ const timelineHomeworks = computed(() =>
   homeworks.value
     .filter((item) => (
       !item.done
-      && isInCurrentWeek(item)
-      && getHomeworkState(item) !== 'overdue'
+      && isInCurrentWeek(item, new Date(now.value))
+      && getHomeworkState(item, now.value) !== 'overdue'
     ))
     .sort(compareDeadlines)
     .slice(0, 5),
@@ -174,13 +187,6 @@ function applyHomeworkSnapshot(snapshot: HomeworkResponse) {
   homeworks.value = snapshot.homeworks
   lastRefreshTime.value = snapshot.last_refresh_time
   page.value = 1
-}
-
-async function handleAuthenticationError(error: unknown): Promise<boolean> {
-  if (!isAuthenticationError(error)) return false
-  clearSession()
-  await router.replace('/login')
-  return true
 }
 
 async function loadHomeworks() {
@@ -294,8 +300,8 @@ onMounted(loadHomeworks)
               <strong>暂无待截止作业</strong>
             </template>
           </div>
-          <b v-if="priorityHomework" class="focus-remaining" :class="getHomeworkState(priorityHomework)">
-            {{ formatRemaining(priorityHomework) }}
+          <b v-if="priorityHomework" class="focus-remaining" :class="getHomeworkState(priorityHomework, now)">
+            {{ formatRemaining(priorityHomework, now) }}
           </b>
         </article>
 
@@ -383,7 +389,7 @@ onMounted(loadHomeworks)
                   </td>
                   <td><span class="platform-chip" :class="getPlatformMeta(homework.platform).className"><i />{{ homework.platform }}</span></td>
                   <td><div class="deadline-cell"><strong>{{ formatDeadlineDate(homework.deadline) }}</strong><span>{{ formatTimelineTime(homework.deadline) }}</span></div></td>
-                  <td><span class="remaining-chip" :class="getHomeworkState(homework)">{{ formatRemaining(homework) }}</span></td>
+                  <td><span class="remaining-chip" :class="getHomeworkState(homework, now)">{{ formatRemaining(homework, now) }}</span></td>
                   <td>
                     <NButton
                       dashed
@@ -414,7 +420,7 @@ onMounted(loadHomeworks)
             <article v-for="homework in pagedHomeworks" v-else :key="homework.id ?? `${homework.platform}-${homework.title}`" :class="{ completed: homework.done }">
               <div class="mobile-task-head">
                 <span class="platform-chip" :class="getPlatformMeta(homework.platform).className"><i />{{ homework.platform }}</span>
-                <span class="remaining-chip" :class="getHomeworkState(homework)">{{ formatRemaining(homework) }}</span>
+                <span class="remaining-chip" :class="getHomeworkState(homework, now)">{{ formatRemaining(homework, now) }}</span>
               </div>
               <a v-if="homework.url" class="mobile-task-title" :href="homework.url" target="_blank" rel="noopener noreferrer">{{ homework.title }}</a>
               <strong v-else class="mobile-task-title">{{ homework.title }}</strong>
@@ -476,7 +482,7 @@ onMounted(loadHomeworks)
       </div>
     </main>
 
-    <HomeworkCalendarModal v-model:show="calendarVisible" :homeworks="homeworks" />
+    <HomeworkCalendarModal v-model:show="calendarVisible" :homeworks="homeworks" :now="now" />
   </div>
 </template>
 

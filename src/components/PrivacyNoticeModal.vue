@@ -135,7 +135,6 @@ const emit = defineEmits<{
 
 .privacy-highlights {
   margin: 0 0 24px;
-  padding: 0;
 }
 
 .privacy-highlights ul {

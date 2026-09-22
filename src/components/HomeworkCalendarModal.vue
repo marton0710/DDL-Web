@@ -28,26 +28,36 @@ interface CalendarDay {
 const props = defineProps<{
   show: boolean
   homeworks: Homework[]
+  now: number
 }>()
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
 }>()
 
-const today = new Date()
-const viewedMonth = ref(startOfMonth(today))
-const selectedDateKey = ref(toDateKey(today))
+const today = computed(() => new Date(props.now))
+const viewedMonth = ref(startOfMonth(today.value))
+const selectedDateKey = ref(toDateKey(today.value))
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const datedHomeworks = computed(() =>
   props.homeworks
-    .filter((homework) => parseDeadline(homework.deadline))
-    .sort((left, right) => {
-      const leftTime = parseDeadline(left.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      const rightTime = parseDeadline(right.deadline)?.getTime() ?? Number.MAX_SAFE_INTEGER
-      return leftTime - rightTime
-    }),
+    .flatMap((homework) => {
+      const deadline = parseDeadline(homework.deadline)
+      return deadline ? [{ homework, deadline, timestamp: deadline.getTime(), key: toDateKey(deadline) }] : []
+    })
+    .sort((left, right) => left.timestamp - right.timestamp),
 )
+
+const groupedHomeworks = computed(() => {
+  const groups = new Map<string, Homework[]>()
+  for (const { homework, key } of datedHomeworks.value) {
+    const group = groups.get(key)
+    if (group) group.push(homework)
+    else groups.set(key, [homework])
+  }
+  return groups
+})
 
 const monthLabel = computed(() =>
   `${viewedMonth.value.getFullYear()}年 ${viewedMonth.value.getMonth() + 1}月`,
@@ -59,14 +69,7 @@ const calendarDays = computed<CalendarDay[]>(() => {
   const gridStart = new Date(firstDay)
   gridStart.setDate(gridStart.getDate() - mondayOffset)
 
-  const groupedHomeworks = new Map<string, Homework[]>()
-  for (const homework of datedHomeworks.value) {
-    const deadline = parseDeadline(homework.deadline)
-    if (!deadline) continue
-    const key = toDateKey(deadline)
-    groupedHomeworks.set(key, [...(groupedHomeworks.get(key) ?? []), homework])
-  }
-
+  const todayKey = toDateKey(today.value)
   return Array.from({ length: 42 }, (_, index) => {
     const date = new Date(gridStart)
     date.setDate(gridStart.getDate() + index)
@@ -75,8 +78,8 @@ const calendarDays = computed<CalendarDay[]>(() => {
       date,
       key,
       inCurrentMonth: date.getMonth() === viewedMonth.value.getMonth(),
-      isToday: key === toDateKey(today),
-      homeworks: groupedHomeworks.get(key) ?? [],
+      isToday: key === todayKey,
+      homeworks: groupedHomeworks.value.get(key) ?? [],
     }
   })
 })
@@ -111,19 +114,16 @@ function toDateKey(date: Date): string {
 }
 
 function getDefaultDate(): Date {
-  const todayKey = toDateKey(today)
-  const currentMonthHomework = datedHomeworks.value.find((homework) => {
-    const deadline = parseDeadline(homework.deadline)
-    return deadline && startOfMonth(deadline).getTime() === startOfMonth(today).getTime()
-  })
-  if (currentMonthHomework) return today
+  const todayKey = toDateKey(today.value)
+  const currentMonth = startOfMonth(today.value).getTime()
+  const hasCurrentMonthHomework = datedHomeworks.value.some(({ deadline }) => (
+    startOfMonth(deadline).getTime() === currentMonth
+  ))
+  if (hasCurrentMonthHomework) return today.value
 
-  const upcomingHomework = datedHomeworks.value.find((homework) => {
-    const deadline = parseDeadline(homework.deadline)
-    return deadline && toDateKey(deadline) >= todayKey && !homework.done
-  })
+  const upcomingHomework = datedHomeworks.value.find(({ homework, key }) => key >= todayKey && !homework.done)
   const lastHomework = datedHomeworks.value[datedHomeworks.value.length - 1]
-  return parseDeadline(upcomingHomework?.deadline ?? lastHomework?.deadline ?? null) ?? today
+  return upcomingHomework?.deadline ?? lastHomework?.deadline ?? today.value
 }
 
 function changeMonth(offset: number) {
@@ -133,8 +133,8 @@ function changeMonth(offset: number) {
 }
 
 function goToToday() {
-  viewedMonth.value = startOfMonth(today)
-  selectedDateKey.value = toDateKey(today)
+  viewedMonth.value = startOfMonth(today.value)
+  selectedDateKey.value = toDateKey(today.value)
 }
 
 function selectDay(day: CalendarDay) {
@@ -199,7 +199,7 @@ function selectDay(day: CalendarDay) {
                 class="day-homework"
                 :class="[
                   getPlatformMeta(homework.platform).className,
-                  getHomeworkState(homework),
+                  getHomeworkState(homework, now),
                 ]"
                 :title="homework.title"
               >
@@ -247,7 +247,7 @@ function selectDay(day: CalendarDay) {
               <strong v-else :title="homework.title">{{ homework.title }}</strong>
               <span>{{ formatTimelineTime(homework.deadline) }} · {{ homework.course_name || '未分类课程' }} · {{ homework.platform }}</span>
             </div>
-            <em :class="getHomeworkState(homework)">{{ formatRemaining(homework) }}</em>
+            <em :class="getHomeworkState(homework, now)">{{ formatRemaining(homework, now) }}</em>
           </article>
         </div>
       </section>

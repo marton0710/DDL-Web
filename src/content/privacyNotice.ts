@@ -14,7 +14,7 @@ interface PrivacyNoticeHighlight {
   detail: string
 }
 
-export const PRIVACY_NOTICE_UPDATED_AT = '2026年8月20日'
+export const PRIVACY_NOTICE_UPDATED_AT = '2026年9月22日'
 
 export const PRIVACY_NOTICE_HIGHLIGHTS: readonly PrivacyNoticeHighlight[] = [
   {
@@ -23,7 +23,7 @@ export const PRIVACY_NOTICE_HIGHLIGHTS: readonly PrivacyNoticeHighlight[] = [
   },
   {
     title: '可选功能由您决定',
-    detail: 'QQ机器人提醒和 Meet 课程表仅在您主动绑定后处理。',
+    detail: 'QQ机器人提醒、Meet 课程表和 ICS 日历订阅都由您主动开启。',
   },
   {
     title: '不出售个人信息',
@@ -55,6 +55,10 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
         summary: '可选功能与日志：',
         detail: 'QQ机器人提醒所需的绑定码和 MeetSchedule Key 属于可选信息，只有在您主动填写并保存时才会处理。为了保障服务稳定和排查异常，服务器还可能记录必要的访问日志，例如访问时间、请求地址、响应状态、IP 地址和浏览器基本信息。',
       },
+      {
+        summary: 'ICS 订阅记录：',
+        detail: '创建订阅后，我们会保存订阅所属账号、订阅编号、创建时间、拉取次数和最近一次拉取时间，用于提供订阅服务，并在“我的”页面显示使用情况。',
+      },
     ],
   },
   {
@@ -62,11 +66,15 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
     paragraphs: [
       {
         summary: '功能所需：',
-        detail: '这些信息只用于完成您实际使用的功能，包括登录、维持会话、绑定学习平台、在授权失效后重新认证、同步和展示作业、记录完成状态，以及您主动启用的提醒或课程表同步。',
+        detail: '这些信息只用于完成您实际使用的功能，包括登录、维持会话、绑定学习平台、在授权失效后重新认证、同步和展示作业、记录完成状态，以及您主动启用的提醒、课程表同步或日历订阅。',
       },
       {
         summary: '必要的第三方传输：',
         detail: '在执行上述功能时，我们会向重庆邮电大学统一认证服务、您选择绑定的学习平台，以及您主动配置的 QQ机器人提醒或 MeetSchedule 等服务发送完成请求所必需的信息。第三方服务会按照其自身的规则处理收到的信息，建议您同时阅读相应平台的隐私说明。',
+      },
+      {
+        summary: '添加到日历后：',
+        detail: '您使用的日历应用或其服务商会通过订阅链接读取课程名称、作业标题、截止时间、所属平台和作业链接，并可能保存这些内容。这些内容在日历服务中的使用和保存方式，以该服务的隐私说明为准。',
       },
       {
         summary: '我们的承诺：',
@@ -82,6 +90,10 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
         detail: '登录凭据会尽可能安全地保存。统一认证密码以及需要独立密码认证的平台凭据，会在写入服务端数据库前进行加密；统一认证 Cookie、平台 Cookie 和同步得到的作业数据也会保存在服务端。浏览器中的登录 Cookie 只用于维持当前会话，并会设置为不允许网页脚本直接读取。',
       },
       {
+        summary: '请保管好订阅链接：',
+        detail: '拿到 ICS 订阅链接的人无需登录，就能读取其中的作业信息，请不要公开或转发。订阅凭据只在创建时返回，数据库中只保存它的哈希值。链接丢失后无法找回；如果担心链接泄露，可以撤销该订阅，再创建新的链接。',
+      },
+      {
         summary: '使用密码登录前请注意：',
         detail: '如果您选择密码登录，我们将会保存您的统一认证平台密码和各作业平台的密码。我们会尽可能安全地保存这些密码。请预先将这些平台的密码更改为您的非常用密码，并确保不要与其他重要账户共用；如果介意，请勿使用密码登录。',
         tone: 'warning',
@@ -92,7 +104,7 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
       },
       {
         summary: '保存期限：',
-        detail: '在您继续使用账号期间，我们会保存维持服务所必需的信息。平台凭据和 Cookie 会保存到您解绑该平台或注销账号为止；同步作业会持续累积，并在对应平台解绑或账号注销时删除；访问日志仅在保障安全、排查故障和履行法定义务所需的期限内保存。法律另有规定的，按其要求处理。',
+        detail: '在您继续使用账号期间，我们会保存维持服务所必需的信息。平台凭据和 Cookie 会保存到您解绑该平台或注销账号为止；同步作业会持续累积，并在对应平台解绑或账号注销时删除；ICS 订阅记录保存到您撤销该订阅或注销账号为止；访问日志仅在保障安全、排查故障和履行法定义务所需的期限内保存。法律另有规定的，按其要求处理。',
       },
       {
         summary: '安全事件：',
@@ -108,8 +120,12 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
         detail: '您可以在“我的”页面查看平台连接状态、解绑学习平台，也可以更换或取消 QQ机器人提醒和 Meet 课程表绑定。解绑学习平台后，我们会删除对应的登录凭据、Cookie 和该平台已经同步的作业；取消可选功能绑定后，我们会清除对应的绑定码或同步密钥。',
       },
       {
+        summary: '管理日历订阅：',
+        detail: '一个账号可以创建多条 ICS 订阅，您可以在“我的”页面分别撤销。撤销后，我们会删除该条订阅记录，对应链接随即失效，其他订阅不受影响。我们无法替您删除日历应用已保存的内容，如需清理，请在对应的日历应用中操作。',
+      },
+      {
         summary: '退出登录：',
-        detail: '退出登录会使当前账号已有的登录令牌失效，其他设备可能也需要重新登录；该操作不会删除服务端账号、平台绑定或作业数据。',
+        detail: '退出登录会使当前账号已有的登录令牌失效，其他设备可能也需要重新登录；该操作不会删除服务端账号、平台绑定或作业数据，也不会停止已有的 ICS 订阅。',
       },
       {
         summary: '注销账户：',
@@ -122,7 +138,7 @@ export const PRIVACY_NOTICE_SECTIONS: readonly PrivacyNoticeSection[] = [
       },
       {
         summary: '请勿公开敏感信息：',
-        detail: '请不要在公开 Issue 中填写密码、Cookie、Token、QQ机器人提醒绑定码、MeetSchedule Key 或其他敏感信息。如果处理请求需要这些信息，维护者会另行提供更安全的沟通方式。',
+        detail: '请不要在公开 Issue 中填写密码、Cookie、Token、QQ机器人提醒绑定码、MeetSchedule Key、ICS 订阅链接或其他敏感信息。如果处理请求需要这些信息，维护者会另行提供更安全的沟通方式。',
         tone: 'warning',
       },
       {
