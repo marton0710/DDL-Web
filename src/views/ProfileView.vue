@@ -500,7 +500,7 @@ onMounted(async () => {
               <NRadioButton value="scheduled">定时提醒</NRadioButton>
               <NRadioButton value="realtime">实时提醒</NRadioButton>
             </NRadioGroup>
-            <p class="reminder-mode-description">{{ qqReminderForm.mode === 'scheduled' ? '每天按指定时刻汇总推送' : '在临期范围的作业推送提醒，可能存在延迟' }}</p>
+            <p class="reminder-mode-description">{{ qqReminderForm.mode === 'scheduled' ? '每天按指定时刻（北京时间）汇总推送' : '在临期范围的作业推送提醒，可能存在延迟' }}</p>
           </div>
           <div
             class="reminder-setting-grid"
